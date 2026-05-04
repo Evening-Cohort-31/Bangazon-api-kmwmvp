@@ -25,11 +25,25 @@ sudo apt install libtiff5-dev libjpeg8-dev libopenjp2-7-dev zlib1g-dev \
 1. Clone this repository and change to the directory in the terminal.
 2. Run `poetry env activate` and wait for the virtual environment to be created.
 3. Run `poetry install` to install dependencies.
+
+> **Note:** If `poetry env activate` gives you trouble or you end up with a mismatched virtual environment name, you can use the included `requirements.txt` instead:
+>
+> ```bash
+> python3 -m venv bangazon-env
+> source bangazon-env/bin/activate
+> pip install -r requirements.txt
+> ```
+>
+> This skips the Poetry setup entirely and gets you all the dependencies in one shot. `setuptools` is already included in `requirements.txt`, so you can also skip step 4 below.
+>
+> **Important:** The system dependencies listed above (Mac or Linux section) are still required even when using this path. Pillow, which handles image processing, depends on those system-level libraries and will fail to install without them.
+<!-- markdownlint-disable MD029 -->
 4. Run `pip install setuptools`
 5. Run migrations and install starter data with the `./seed_data.sh` script.
 6. Open the project in VS Code if you haven't yet.
 7. Ensure that the correct Python Interpreter is chosen in VS Code.
 8. Start your debugger.
+<!-- markdownlint-enable MD029 -->
 
 ## Postman Request Collection
 
@@ -40,12 +54,13 @@ sudo apt install libtiff5-dev libjpeg8-dev libopenjp2-7-dev zlib1g-dev \
 5. Click **Import** to complete the process
 6. You will see a confirmation that a new workspace has been created for you.
 
-#### Test Login Request
+### Test Login Request
 
 1. Expand the **Profile** collection
 2. Click on **Login** to open the request
 3. Send the request.
 4. You should get a response back that looks like this
+
    ```json
    {
        "valid": true,
@@ -60,4 +75,4 @@ Look in the `users.json` file for the usernames. While the passwords in the fixt
 
 ## Changing Your Database
 
-You can run the `./seed-data.sh` script any time to make changes to database models, or just want to roll back your data to its original state. It deletes the database, any existing migrations, and then re-creates the database based on your current models, and inserts starter data.
+You can run the `./seed_data.sh` script any time to make changes to database models, or just want to roll back your data to its original state. It deletes the database, any existing migrations, and then re-creates the database based on your current models, and inserts starter data.

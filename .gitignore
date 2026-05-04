@@ -121,6 +121,7 @@ celerybeat.pid
 .venv
 env/
 venv/
+bangazon-env/
 ENV/
 env.bak/
 venv.bak/
