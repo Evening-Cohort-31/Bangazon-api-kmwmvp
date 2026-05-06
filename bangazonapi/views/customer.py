@@ -19,14 +19,6 @@ class CustomerSerializer(serializers.HyperlinkedModelSerializer):
 
 class Customers(ViewSet):
 
-    def retrieve(self, request, pk):
-        try:
-            customer = Customer.objects.get(pk=pk)
-            serializer = CustomerSerializer(customer, context={'request': request})
-            return Response(serializer.data)
-        except Exception as ex:
-            return HttpResponseServerError(ex)
-
     def update(self, request, pk=None):
         """
         @api {PUT} /customers/:id PUT changes to customer profile
