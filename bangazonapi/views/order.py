@@ -31,6 +31,10 @@ class OrderSerializer(serializers.HyperlinkedModelSerializer):
 
     lineitems = OrderLineItemSerializer(many=True)
     payment_type = PaymentSerializer(many=False, allow_null=True)
+    total = serializers.SerializerMethodField()
+
+    def get_total(self, obj):
+        return sum([item.product.price for item in obj.lineitems.all()])
 
     class Meta:
         model = Order
@@ -38,7 +42,7 @@ class OrderSerializer(serializers.HyperlinkedModelSerializer):
             view_name='order',
             lookup_field='id'
         )
-        fields = ('id', 'url', 'created_date', 'payment_type', 'customer', 'lineitems')
+        fields = ('id', 'url', 'created_date', 'payment_type', 'customer', 'lineitems', 'total')
 
 
 class Orders(ViewSet):
