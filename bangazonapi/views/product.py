@@ -265,9 +265,22 @@ class Products(ViewSet):
         # Support filtering by category and/or quantity
         category = self.request.query_params.get("category", None)
         quantity = self.request.query_params.get("quantity", None)
+
+        # Support filtering by order with selections of min_price, direction, and number_sold
         order = self.request.query_params.get("order_by", None)
         direction = self.request.query_params.get("direction", None)
         number_sold = self.request.query_params.get("number_sold", None)
+        min_price = self.request.query_params.get("min_price", None)
+
+        # Validate that min_price is a number if it is provided
+        if min_price is not None:
+            try:
+                min_price = float(min_price)
+            except ValueError:
+                return Response(
+                    {"error": "min_price must be a valid number."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
         if order is not None:
             order_filter = order
@@ -280,6 +293,15 @@ class Products(ViewSet):
 
         if category is not None:
             products = products.filter(category__id=category)
+
+        if min_price is not None:
+
+            def price_filter(product):
+                if product.price >= min_price:
+                    return True
+                return False
+
+            products = filter(price_filter, products)
 
         if quantity is not None:
             products = products.order_by("-created_date")[: int(quantity)]
