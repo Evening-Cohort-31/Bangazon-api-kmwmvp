@@ -111,7 +111,9 @@ class Orders(ViewSet):
         """
         customer = Customer.objects.get(user=request.auth.user)
         order = Order.objects.get(pk=pk, customer=customer)
-        order.payment_type = request.data["payment_type"]
+        payment = Payment.objects.get(pk=request.data["payment_type"])
+        order.payment_type = payment
+        order.created_date = datetime.date.today()
         order.save()
 
         return Response({}, status=status.HTTP_204_NO_CONTENT)
