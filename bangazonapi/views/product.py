@@ -266,6 +266,9 @@ class Products(ViewSet):
         category = self.request.query_params.get("category", None)
         quantity = self.request.query_params.get("quantity", None)
 
+        # Support filtering by location
+        location = self.request.query_params.get("location", None)
+
         # Support filtering by order with selections of min_price, direction, and number_sold
         order = self.request.query_params.get("order_by", None)
         direction = self.request.query_params.get("direction", None)
@@ -302,6 +305,9 @@ class Products(ViewSet):
                 return False
 
             products = filter(price_filter, products)
+        
+        if location is not None:
+            products = products.filter(location__contains=location)
 
         if quantity is not None:
             products = products.order_by("-created_date")[: int(quantity)]
