@@ -2,10 +2,9 @@
 
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from safedelete.models import SafeDeleteModel
-from safedelete.models import SOFT_DELETE
+from safedelete.models import SafeDeleteModel, SOFT_DELETE
 from .customer import Customer
-from .productcategory import ProductCategory
+from .category import ProductCategory
 from .orderproduct import OrderProduct
 from .productrating import ProductRating
 
@@ -19,7 +18,9 @@ class Product(SafeDeleteModel):
     customer = models.ForeignKey(
         Customer, on_delete=models.DO_NOTHING, related_name="products"
     )
-    price = models.FloatField(
+    price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
         validators=[MinValueValidator(0.00), MaxValueValidator(10000.00)],
     )
     description = models.CharField(
@@ -29,8 +30,8 @@ class Product(SafeDeleteModel):
         validators=[MinValueValidator(0)],
     )
     created_date = models.DateField(auto_now_add=True)
-    category = models.ForeignKey(
-        ProductCategory, on_delete=models.DO_NOTHING, related_name="products"
+    categories = models.ManyToManyField(
+        ProductCategory, related_name="products", blank=True
     )
     location = models.CharField(
         max_length=50,
@@ -75,15 +76,8 @@ class Product(SafeDeleteModel):
         Returns:
             number -- The average rating for the product
         """
-        ratings = ProductRating.objects.filter(product=self)
-        total_rating = 0
-        for rating in ratings:
-            total_rating += rating.rating
-
-        if len(ratings) == 0:
-            return 0
-        avg = total_rating / len(ratings)
-        return avg
+        result = ProductRating.objects.filter(product=self).aggregate(models.Avg("rating"))
+        return result["rating__avg"] or 0
 
     class Meta:
         verbose_name = "product"
