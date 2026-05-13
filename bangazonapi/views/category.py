@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from bangazonapi.models import ProductCategory
 
 
-class ProductCategorySerializer(serializers.HyperlinkedModelSerializer):
+class ProductCategorySerializer(serializers.ModelSerializer):
     """JSON serializer for product category"""
 
     class Meta:
