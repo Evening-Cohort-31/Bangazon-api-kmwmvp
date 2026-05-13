@@ -296,6 +296,9 @@ class Products(ViewSet):
 
         if category is not None:
             products = products.filter(category__id=category)
+        
+        if location is not None:
+            products = products.filter(location__contains=location)
 
         if min_price is not None:
 
@@ -305,9 +308,6 @@ class Products(ViewSet):
                 return False
 
             products = filter(price_filter, products)
-        
-        if location is not None:
-            products = products.filter(location__contains=location)
 
         if quantity is not None:
             products = products.order_by("-created_date")[: int(quantity)]
