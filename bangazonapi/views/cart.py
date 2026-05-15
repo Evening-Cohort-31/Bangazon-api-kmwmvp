@@ -2,6 +2,7 @@
 import datetime
 from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
+from rest_framework.decorators import action
 from rest_framework import status
 from bangazonapi.models import Order, Customer, Product, OrderProduct
 from .product import ProductSerializer
@@ -54,15 +55,22 @@ class Cart(ViewSet):
         open_order = Order.objects.get(
             customer=current_user, payment_type=None)
 
-        line_item = OrderProduct.objects.filter(
-            product__id=pk,
-            order=open_order
-        )[0]
-        line_item.delete()
+        all_items = OrderProduct.objects.filter(
+                order=open_order
+        ).first()
+
+        if line_item:
+            all_items.delete()
 
         return Response({}, status=status.HTTP_204_NO_CONTENT)
-
-
+    
+    @action(detail=False, methods=['delete'])
+    def delete_all(self, request):
+        current_user = Customer.objects.get(user=request.auth.user)
+        open_order = Order.objects.get(customer=current_user, payment_type=None)
+        OrderProduct.objects.filter(order=open_order).delete()
+        return Response({}, status=status.HTTP_204_NO_CONTENT)
+    
     def list(self, request):
         """
         @api {GET} /cart GET line items in cart
