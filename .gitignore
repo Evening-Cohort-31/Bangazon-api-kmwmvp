@@ -153,3 +153,5 @@ migrations
 docs
 Pipfile.lock
 poetry.lock
+bangazon-env/
+Bangazon-env/

@@ -3,6 +3,8 @@ import json
 from django.http import HttpResponse, HttpResponseNotAllowed
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import status
 from rest_framework.authtoken.models import Token
@@ -52,6 +54,15 @@ def register_user(request):
 
     # Load the JSON string of the request body into a dict
     req_body = json.loads(request.body.decode())
+
+    try:
+        validate_password(req_body['password'])
+    except ValidationError as e:
+        return HttpResponse(
+            json.dumps({"valid": False, "errors": e.messages}),
+            content_type='application/json',
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
     # Create a new user by invoking the `create_user` helper method
     # on Django's built-in User model
