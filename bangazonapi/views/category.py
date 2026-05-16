@@ -54,9 +54,34 @@ class ProductCategories(viewsets.ViewSet):
         """Handle GET requests to ProductCategory resource"""
         product_categories = ProductCategory.objects.all()
 
+        query_params = request.query_params
+
+        if "order_by" in query_params:
+            order_by = query_params["order_by"]
+            if order_by not in ["name", "description"]:
+                return Response(
+                    {"message": f"Invalid order_by parameter: {order_by}"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # See if direction is specified, default to ascending if not provided
+            direction = query_params.get("direction", "asc")
+
+            if direction == "desc":
+                product_categories = product_categories.order_by(f"-{order_by}")
+            elif direction == "asc":
+                product_categories = product_categories.order_by(order_by)
+            else:
+                return Response(
+                    {"message": f"Invalid direction parameter: {direction}"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
         # Check for structured=true query parameter to return categories in a structured format
-        structured = request.query_params.get("structured", "false").lower() == "true"
-        if structured:
+        if (
+            "structured" in query_params
+            and query_params["structured"].lower() == "true"
+        ):
             # Build a dictionary to hold categories by their parent category
             structured_categories = {}
             for category in product_categories:
