@@ -3,20 +3,29 @@
 import base64
 
 from django.core.files.base import ContentFile
-from django.http import HttpResponseServerError
-from rest_framework import serializers, status
+from rest_framework import (
+    serializers,
+    status,
+    permissions,
+    viewsets,
+    response,
+)
 from rest_framework.decorators import action
-from rest_framework.parsers import FormParser, MultiPartParser
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
-from rest_framework.response import Response
-from rest_framework.viewsets import ViewSet
+from bangazonapi.models import Customer, Product, ProductCategory, recommendation
 
-from bangazonapi.models import Customer, Product, ProductCategory
-from bangazonapi.models.recommendation import Recommendation
+
+class CategorySummarySerializer(serializers.ModelSerializer):
+    """JSON serializer for product category summary"""
+
+    class Meta:
+        model = ProductCategory
+        fields = ["id", "name"]
 
 
 class ProductSerializer(serializers.ModelSerializer):
     """JSON serializer for products"""
+
+    categories = CategorySummarySerializer(many=True, read_only=True)
 
     class Meta:
         model = Product
@@ -24,6 +33,7 @@ class ProductSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "price",
+            "categories",
             "number_sold",
             "description",
             "quantity",
@@ -33,13 +43,12 @@ class ProductSerializer(serializers.ModelSerializer):
             "average_rating",
             "can_be_rated",
         )
-        depth = 1
 
 
-class Products(ViewSet):
+class Products(viewsets.ViewSet):
     """Request handlers for Products in the Bangazon Platform"""
 
-    permission_classes = (IsAuthenticatedOrReadOnly,)
+    permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
 
     def create(self, request):
         """
@@ -64,7 +73,13 @@ class Products(ViewSet):
                 "description": "It flies high",
                 "quantity": 60,
                 "location": "Pittsburgh",
-                "category_id": 4
+                "categories":
+                    [
+                        {
+                            "id": 6,
+                            "name": "Games/Toys"
+                        }
+                    ]
             }
 
         @apiSuccess (200) {Object} product Created product
@@ -78,7 +93,7 @@ class Products(ViewSet):
         @apiSuccess (200) {String} product.image_path Path to product image
         @apiSuccess (200) {Number} product.average_rating Average customer rating of product
         @apiSuccess (200) {Number} product.number_sold How many items have been purchased
-        @apiSuccess (200) {Object} product.category Category of product
+        @apiSuccess (200) {Object[]} product.categories Categories of product
         @apiSuccessExample {json} Success
             {
                 "id": 101,
@@ -92,10 +107,12 @@ class Products(ViewSet):
                 "location": "Pittsburgh",
                 "image_path": null,
                 "average_rating": 0,
-                "category": {
-                    "url": "http://localhost:8000/productcategories/6",
-                    "name": "Games/Toys"
-                }
+                "categories": [
+                    {
+                        "id": 6,
+                        "name": "Games/Toys"
+                    }
+                ]
             }
         """
         new_product = Product()
@@ -108,8 +125,10 @@ class Products(ViewSet):
         customer = Customer.objects.get(user=request.auth.user)
         new_product.customer = customer
 
-        product_category = ProductCategory.objects.get(pk=request.data["category_id"])
-        new_product.category = product_category
+        new_product.save()
+
+        category_ids = request.data.get("category_ids", [])
+        new_product.categories.set(category_ids)
 
         if "image_path" in request.data:
             format, imgstr = request.data["image_path"].split(";base64,")
@@ -125,7 +144,7 @@ class Products(ViewSet):
 
         serializer = ProductSerializer(new_product, context={"request": request})
 
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return response.Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def retrieve(self, request, pk=None):
         """
@@ -146,7 +165,7 @@ class Products(ViewSet):
         @apiSuccess (200) {String} product.image_path Path to product image
         @apiSuccess (200) {Number} product.average_rating Average customer rating of product
         @apiSuccess (200) {Number} product.number_sold How many items have been purchased
-        @apiSuccess (200) {Object} product.category Category of product
+        @apiSuccess (200) {Object[]} product.categories Categories of product
         @apiSuccessExample {json} Success
             {
                 "id": 101,
@@ -160,18 +179,22 @@ class Products(ViewSet):
                 "location": "Pittsburgh",
                 "image_path": null,
                 "average_rating": 0,
-                "category": {
-                    "url": "http://localhost:8000/productcategories/6",
-                    "name": "Games/Toys"
-                }
+                "categories": [
+                    {
+                        "id": 6,
+                        "name": "Games/Toys"
+                    }
+                ]
             }
         """
         try:
             product = Product.objects.get(pk=pk)
             serializer = ProductSerializer(product, context={"request": request})
-            return Response(serializer.data)
-        except Exception as ex:
-            return HttpResponseServerError(ex)
+            return response.Response(serializer.data)
+        except Product.DoesNotExist:
+            return response.Response(
+                {"message": "Product not found."}, status=status.HTTP_404_NOT_FOUND
+            )
 
     def update(self, request, pk=None):
         """
@@ -187,22 +210,24 @@ class Products(ViewSet):
         @apiSuccessExample {json} Success
             HTTP/1.1 204 No Content
         """
-        product = Product.objects.get(pk=pk)
-        product.name = request.data["name"]
-        product.price = request.data["price"]
-        product.description = request.data["description"]
-        product.quantity = request.data["quantity"]
-        product.created_date = request.data["created_date"]
-        product.location = request.data["location"]
+        try:
+            product = Product.objects.get(pk=pk)
+        except Product.DoesNotExist:
+            return response.Response(
+                {"message": "Product not found."}, status=status.HTTP_404_NOT_FOUND
+            )
 
-        customer = Customer.objects.get(user=request.auth.user)
-        product.customer = customer
-
-        product_category = ProductCategory.objects.get(pk=request.data["category_id"])
-        product.category = product_category
+        product.name = request.data.get("name", product.name)
+        product.price = request.data.get("price", product.price)
+        product.description = request.data.get("description", product.description)
+        product.quantity = request.data.get("quantity", product.quantity)
+        product.location = request.data.get("location", product.location)
         product.save()
 
-        return Response({}, status=status.HTTP_204_NO_CONTENT)
+        if "category_ids" in request.data:
+            product.categories.set(request.data["category_ids"])
+
+        return response.Response({}, status=status.HTTP_204_NO_CONTENT)
 
     def destroy(self, request, pk=None):
         """
@@ -222,13 +247,15 @@ class Products(ViewSet):
             product = Product.objects.get(pk=pk)
             product.delete()
 
-            return Response({}, status=status.HTTP_204_NO_CONTENT)
+            return response.Response({}, status=status.HTTP_204_NO_CONTENT)
 
         except Product.DoesNotExist as ex:
-            return Response({"message": ex.args[0]}, status=status.HTTP_404_NOT_FOUND)
+            return response.Response(
+                {"message": ex.args[0]}, status=status.HTTP_404_NOT_FOUND
+            )
 
         except Exception as ex:
-            return Response(
+            return response.Response(
                 {"message": ex.args[0]}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
@@ -253,10 +280,12 @@ class Products(ViewSet):
                     "location": "Pittsburgh",
                     "image_path": null,
                     "average_rating": 0,
-                    "category": {
-                        "url": "http://localhost:8000/productcategories/6",
-                        "name": "Games/Toys"
-                    }
+                    "categories": [
+                        {
+                            "id": 6,
+                            "name": "Games/Toys"
+                        }
+                    ]
                 }
             ]
         """
@@ -280,7 +309,7 @@ class Products(ViewSet):
             try:
                 min_price = float(min_price)
             except ValueError:
-                return Response(
+                return response.Response(
                     {"error": "min_price must be a valid number."},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
@@ -295,7 +324,7 @@ class Products(ViewSet):
             products = products.order_by(order_filter)
 
         if category is not None:
-            products = products.filter(category__id=category)
+            products = products.filter(categories__id=category)
         
         if location is not None:
             products = products.filter(location__contains=location)
@@ -324,20 +353,20 @@ class Products(ViewSet):
         serializer = ProductSerializer(
             products, many=True, context={"request": request}
         )
-        return Response(serializer.data)
+        return response.Response(serializer.data)
 
     @action(methods=["post"], detail=True)
     def recommend(self, request, pk=None):
         """Recommend products to other users"""
 
         if request.method == "POST":
-            rec = Recommendation()
+            rec = recommendation.Recommendation()
             rec.recommender = Customer.objects.get(user=request.auth.user)
             rec.customer = Customer.objects.get(user__id=request.data["recipient"])
             rec.product = Product.objects.get(pk=pk)
 
             rec.save()
 
-            return Response(None, status=status.HTTP_204_NO_CONTENT)
+            return response.Response(None, status=status.HTTP_204_NO_CONTENT)
 
-        return Response(None, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        return response.Response(None, status=status.HTTP_405_METHOD_NOT_ALLOWED)

@@ -3,42 +3,180 @@
         "model": "bangazonapi.productcategory",
         "pk": 1,
         "fields": {
-            "name": "Tools"
+            "name": "Tools",
+            "description": "Hand tools, power tools, hardware, and workshop equipment for home improvement and professional use.",
+            "parent_category": null
         }
     },
     {
         "model": "bangazonapi.productcategory",
         "pk": 2,
         "fields": {
-            "name": "Auto"
+            "name": "Auto",
+            "description": "Car parts, accessories, maintenance supplies, and automotive upgrades.",
+            "parent_category": null
         }
     },
     {
         "model": "bangazonapi.productcategory",
         "pk": 3,
         "fields": {
-            "name": "Technology"
+            "name": "Technology",
+            "description": "Electronics, gadgets, computers, software, and tech accessories.",
+            "parent_category": null
         }
     },
     {
         "model": "bangazonapi.productcategory",
         "pk": 4,
         "fields": {
-            "name": "Arts & Crafts"
+            "name": "Arts & Crafts",
+            "description": "Supplies for painting, drawing, DIY projects, and other creative hobbies.",
+            "parent_category": null
         }
     },
     {
         "model": "bangazonapi.productcategory",
         "pk": 5,
         "fields": {
-            "name": "Clothes"
+            "name": "Clothes",
+            "description": "Men's, women's, and children's apparel for all occasions and seasons.",
+            "parent_category": null
         }
     },
     {
         "model": "bangazonapi.productcategory",
         "pk": 6,
         "fields": {
-            "name": "Games/Toys"
+            "name": "Games/Toys",
+            "description": "Board games, video games, outdoor play equipment, and toys for all ages.",
+            "parent_category": null
+        }
+    },
+    {
+        "model": "bangazonapi.productcategory",
+        "pk": 7,
+        "fields": {
+            "name": "Hand Tools",
+            "description": "Hammers, screwdrivers, wrenches, and other manually operated tools for everyday repairs.",
+            "parent_category": 1
+        }
+    },
+    {
+        "model": "bangazonapi.productcategory",
+        "pk": 8,
+        "fields": {
+            "name": "Power Tools",
+            "description": "Drills, saws, sanders, and other electrically powered tools for heavy-duty work.",
+            "parent_category": 1
+        }
+    },
+    {
+        "model": "bangazonapi.productcategory",
+        "pk": 9,
+        "fields": {
+            "name": "Car Parts",
+            "description": "Replacement and performance parts including brakes, filters, belts, and engine components.",
+            "parent_category": 2
+        }
+    },
+    {
+        "model": "bangazonapi.productcategory",
+        "pk": 10,
+        "fields": {
+            "name": "Car Accessories",
+            "description": "Interior and exterior accessories including seat covers, floor mats, and organizers.",
+            "parent_category": 2
+        }
+    },
+    {
+        "model": "bangazonapi.productcategory",
+        "pk": 11,
+        "fields": {
+            "name": "Computers & Laptops",
+            "description": "Desktop computers, laptops, tablets, and computing peripherals.",
+            "parent_category": 3
+        }
+    },
+    {
+        "model": "bangazonapi.productcategory",
+        "pk": 12,
+        "fields": {
+            "name": "Smart Home Devices",
+            "description": "Connected home devices including smart speakers, cameras, thermostats, and lighting.",
+            "parent_category": 3
+        }
+    },
+    {
+        "model": "bangazonapi.productcategory",
+        "pk": 13,
+        "fields": {
+            "name": "Painting & Drawing",
+            "description": "Paints, brushes, canvases, sketchbooks, and drawing tools for artists of all levels.",
+            "parent_category": 4
+        }
+    },
+    {
+        "model": "bangazonapi.productcategory",
+        "pk": 14,
+        "fields": {
+            "name": "DIY & Crafting Supplies",
+            "description": "Fabric, glue, scissors, beads, and materials for hands-on craft projects.",
+            "parent_category": 4
+        }
+    },
+    {
+        "model": "bangazonapi.productcategory",
+        "pk": 15,
+        "fields": {
+            "name": "Men's Clothing",
+            "description": "Shirts, pants, jackets, and footwear for men across all styles and sizes.",
+            "parent_category": 5
+        }
+    },
+    {
+        "model": "bangazonapi.productcategory",
+        "pk": 16,
+        "fields": {
+            "name": "Women's Clothing",
+            "description": "Dresses, tops, pants, shoes, and accessories for women across all styles and sizes.",
+            "parent_category": 5
+        }
+    },
+    {
+        "model": "bangazonapi.productcategory",
+        "pk": 17,
+        "fields": {
+            "name": "Kids' Clothing",
+            "description": "Everyday and seasonal clothing for infants, toddlers, and children.",
+            "parent_category": 5
+        }
+    },
+    {
+        "model": "bangazonapi.productcategory",
+        "pk": 18,
+        "fields": {
+            "name": "Video Games",
+            "description": "Console and PC games, controllers, and gaming accessories for all platforms.",
+            "parent_category": 6
+        }
+    },
+    {
+        "model": "bangazonapi.productcategory",
+        "pk": 19,
+        "fields": {
+            "name": "Board Games",
+            "description": "Strategy games, card games, party games, and puzzles for all ages.",
+            "parent_category": 6
+        }
+    },
+    {
+        "model": "bangazonapi.productcategory",
+        "pk": 20,
+        "fields": {
+            "name": "Baby & Toddler Toys",
+            "description": "Safe, age-appropriate toys and learning tools for infants and toddlers.",
+            "parent_category": 6
         }
     }
 ]
