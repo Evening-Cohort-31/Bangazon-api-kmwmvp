@@ -54,6 +54,60 @@ class ProductCategories(viewsets.ViewSet):
         """Handle GET requests to ProductCategory resource"""
         product_categories = ProductCategory.objects.all()
 
+        query_params = request.query_params
+
+        if "order_by" in query_params:
+            order_by = query_params["order_by"]
+            if order_by not in ["name", "description"]:
+                return Response(
+                    {"message": f"Invalid order_by parameter: {order_by}"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # See if direction is specified, default to ascending if not provided
+            direction = query_params.get("direction", "asc")
+
+            if direction == "desc":
+                product_categories = product_categories.order_by(f"-{order_by}")
+            elif direction == "asc":
+                product_categories = product_categories.order_by(order_by)
+            else:
+                return Response(
+                    {"message": f"Invalid direction parameter: {direction}"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        # Check for structured=true query parameter to return categories in a structured format
+        if (
+            "structured" in query_params
+            and query_params["structured"].lower() == "true"
+        ):
+            # Build a dictionary to hold categories by their parent category
+            structured_categories = {}
+            for category in product_categories:
+                # setdefault will create a new list for the parent_category_id if it doesn't exist
+                structured_categories.setdefault(
+                    category.parent_category_id, []
+                ).append(category)
+
+            # Function to recursively build the structured response
+            def build_structure(parent_id):
+                children = structured_categories.get(parent_id, [])
+                return [
+                    {
+                        "id": child.id,
+                        "name": child.name,
+                        "description": child.description,
+                        "parent_category": child.parent_category_id,
+                        "children": build_structure(child.id),
+                    }
+                    for child in children
+                ]
+
+            # Start building the structure from the root categories (parent_id=None)
+            structured_response = build_structure(None)
+            return Response(structured_response)
+
         serializer = ProductCategorySerializer(
             product_categories, many=True, context={"request": request}
         )
