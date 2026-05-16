@@ -54,6 +54,35 @@ class ProductCategories(viewsets.ViewSet):
         """Handle GET requests to ProductCategory resource"""
         product_categories = ProductCategory.objects.all()
 
+        # Check for structured=true query parameter to return categories in a structured format
+        structured = request.query_params.get("structured", "false").lower() == "true"
+        if structured:
+            # Build a dictionary to hold categories by their parent category
+            structured_categories = {}
+            for category in product_categories:
+                # setdefault will create a new list for the parent_category_id if it doesn't exist
+                structured_categories.setdefault(
+                    category.parent_category_id, []
+                ).append(category)
+
+            # Function to recursively build the structured response
+            def build_structure(parent_id):
+                children = structured_categories.get(parent_id, [])
+                return [
+                    {
+                        "id": child.id,
+                        "name": child.name,
+                        "description": child.description,
+                        "parent_category": child.parent_category_id,
+                        "children": build_structure(child.id),
+                    }
+                    for child in children
+                ]
+
+            # Start building the structure from the root categories (parent_id=None)
+            structured_response = build_structure(None)
+            return Response(structured_response)
+
         serializer = ProductCategorySerializer(
             product_categories, many=True, context={"request": request}
         )
