@@ -5,7 +5,8 @@ import json
 # Import transaction management tools from Django to handle atomic database operations
 from django.db import IntegrityError, transaction
 from django.http import HttpResponse, HttpResponseNotAllowed
-from django.contrib.auth import authenticate, get_user_model
+from django.contrib.auth import authenticate, get_user_model, password_validation
+from django.core.exceptions import ValidationError
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import status
 from rest_framework.authtoken.models import Token
@@ -82,8 +83,17 @@ def register_user(request):
                     f"Missing required field: {field}",
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-        try:
 
+        try:
+            password_validation.validate_password(req_body["password"])
+        except ValidationError as e:
+            return HttpResponse(
+                json.dumps({"valid": False, "errors": e.messages}),
+                content_type="application/json",
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
             # Use a transaction to ensure that the user and customer records are created together
             with transaction.atomic():
                 # Create a new user by invoking the `create_user` helper method
