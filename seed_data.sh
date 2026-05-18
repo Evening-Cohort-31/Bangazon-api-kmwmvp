@@ -14,3 +14,6 @@ python manage.py loaddata payment
 python manage.py loaddata order
 python manage.py loaddata order_product
 python manage.py loaddata favoritesellers
+
+mkdir -p media/products
+cp bangazonapi/fixtures/seed_images/* media/products/
