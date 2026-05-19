@@ -125,6 +125,10 @@ class Products(viewsets.ViewSet):
         customer = Customer.objects.get(user=request.auth.user)
         new_product.customer = customer
 
+        if float(new_product.price) > 17500:
+            return response.Response({"message" : "Product price must be less than 17,500"}, status=status.HTTP_400_BAD_REQUEST)
+
+
         new_product.save()
 
         category_ids = request.data.get("category_ids", [])
