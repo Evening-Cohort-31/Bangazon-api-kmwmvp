@@ -1,13 +1,12 @@
 """View module for handling requests about customer order"""
 
-import datetime
 from django.http import HttpResponseServerError
 from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
 from rest_framework import serializers
 from rest_framework import status
 from rest_framework.decorators import action
-from bangazonapi.models import Order, Payment, Customer, Product, OrderProduct
+from bangazonapi.models import Order, Payment, Customer, OrderProduct
 from .product import ProductSerializer
 from .paymenttype import PaymentSerializer
 
