@@ -365,7 +365,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     """
     user = UserSerializer(many=False)
     recommends = RecommenderSerializer(many=True)
-    likes = ProductSerializer(source='liked_products', many=True)
+    likes = ProfileProductSerializer(source='liked_products', many=True)
 
     class Meta:
         model = Customer
