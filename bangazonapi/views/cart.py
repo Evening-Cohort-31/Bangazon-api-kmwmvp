@@ -55,12 +55,13 @@ class Cart(ViewSet):
         open_order = Order.objects.get(
             customer=current_user, payment_type=None)
 
-        all_items = OrderProduct.objects.filter(
-                order=open_order
+        line_item = OrderProduct.objects.filter(
+                order=open_order,
+                product_id=pk
         ).first()
 
         if line_item:
-            all_items.delete()
+            line_item.delete()
 
         return Response({}, status=status.HTTP_204_NO_CONTENT)
     
