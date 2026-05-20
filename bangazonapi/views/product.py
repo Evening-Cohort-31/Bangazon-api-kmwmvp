@@ -127,7 +127,7 @@ class Products(viewsets.ViewSet):
         """
         new_product = Product()
         new_product.name = request.data["name"]
-        new_product.price = request.data["price"]
+        new_product.price = Decimal(request.data["price"])
         new_product.description = request.data["description"]
         new_product.quantity = request.data["quantity"]
         new_product.location = request.data["location"]
@@ -259,8 +259,10 @@ class Products(viewsets.ViewSet):
 
         if "category_ids" in request.data:
             product.categories.set(request.data["category_ids"])
+        
+        serialized = ProductSerializer(product, context={"request": request})
 
-        return response.Response({}, status=status.HTTP_204_NO_CONTENT)
+        return response.Response(serialized.data, status=status.HTTP_200_OK)
 
     def destroy(self, request, pk=None):
         """
