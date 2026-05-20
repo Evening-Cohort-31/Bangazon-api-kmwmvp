@@ -1,6 +1,7 @@
 """View module for handling requests about products"""
 
 import base64
+from decimal import Decimal
 
 from django.core.files.base import ContentFile
 from rest_framework import (
@@ -126,13 +127,20 @@ class Products(viewsets.ViewSet):
         """
         new_product = Product()
         new_product.name = request.data["name"]
-        new_product.price = request.data["price"]
+        new_product.price = Decimal(request.data["price"])
         new_product.description = request.data["description"]
         new_product.quantity = request.data["quantity"]
         new_product.location = request.data["location"]
 
         customer = Customer.objects.get(user=request.auth.user)
         new_product.customer = customer
+
+        if new_product.price < Decimal("0.00"):
+            return response.Response({"message" : "Product price cannot be negative."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if new_product.price > Decimal("17500.00"):
+            return response.Response({"message" : "Product price needs to be no more than 17,500"}, status=status.HTTP_400_BAD_REQUEST)
+
 
         new_product.save()
 
@@ -231,12 +239,30 @@ class Products(viewsets.ViewSet):
         product.description = request.data.get("description", product.description)
         product.quantity = request.data.get("quantity", product.quantity)
         product.location = request.data.get("location", product.location)
+
+        if "price" in request.data:
+            try:
+                product.price = Decimal(str(request.data["price"]))
+            except Exception:
+                return response.Response(
+                    {"message": "Invalid price format."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        if product.price < Decimal("0.00"):
+            return response.Response({"message" : "Product price cannot be negative."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if product.price > Decimal("17500.00"):
+            return response.Response({"message" : "Product price needs to be no more than 17,500"}, status=status.HTTP_400_BAD_REQUEST)
+        
         product.save()
 
         if "category_ids" in request.data:
             product.categories.set(request.data["category_ids"])
+        
+        serialized = ProductSerializer(product, context={"request": request})
 
-        return response.Response({}, status=status.HTTP_204_NO_CONTENT)
+        return response.Response(serialized.data, status=status.HTTP_200_OK)
 
     def destroy(self, request, pk=None):
         """
