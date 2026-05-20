@@ -18,10 +18,12 @@ class Cart(ViewSet):
         @apiGroup ShoppingCart
 
         @apiSuccessExample {json} Success
-            HTTP/1.1 204 No Content
+            HTTP/1.1 201 Created
         @apiParam {Number} product_id Id of product to add
         """
         current_user = Customer.objects.get(user=request.auth.user)
+
+        # TODO: When a Cart model is introduced (ticket 60), this lazy Order creation will be replaced with Cart.objects.get_or_create(customer=current_user)
 
         try:
             open_order = Order.objects.get(
@@ -67,13 +69,14 @@ class Cart(ViewSet):
             return Response(
                 {"message": ex.args[0]}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+    # TODO: When a Cart model is introduced (ticket 60), replace the Order lookup below with Cart.objects.get(customer=current_user). The open/closed Order pattern (payment_type=None as cart) will be completely removed once the Cart model ticket go through.
 
-  
-    @action(detail=False, methods=['delete'])
+    url_path = ''   
+    @action(detail=False, methods=['delete'], url_path='')
     def delete_all(self, request):
         current_user = Customer.objects.get(user=request.auth.user)
         open_order = Order.objects.get(customer=current_user, payment_type=None)
-        OrderProduct.objects.filter(order=open_order).delete()
+        open_order.delete()
         return Response({}, status=status.HTTP_204_NO_CONTENT)
     
     def list(self, request):
