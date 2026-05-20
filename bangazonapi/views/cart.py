@@ -25,6 +25,8 @@ class Cart(ViewSet):
 
         # TODO: When a Cart model is introduced (ticket 60), this lazy Order creation will be replaced with Cart.objects.get_or_create(customer=current_user)
 
+         # TODO: When a Cart model is introduced (ticket 60), replace the Order lookup below with Cart.objects.get(customer=current_user). The open/closed Order pattern (payment_type=None as cart) will be completely removed once the Cart model ticket go through.
+
         try:
             open_order = Order.objects.get(
                 customer=current_user, payment_type__isnull=True)
@@ -55,13 +57,15 @@ class Cart(ViewSet):
             HTTP/1.1 204 No Content
         """
         try:
-            customer = Customer.objects.get(user=request.auth.user)
-            order_product = OrderProduct.objects.get(pk=pk, order__customer=customer)
-
+            current_user= Customer.objects.get(user=request.auth.user)
+            order_product = OrderProduct.objects.get(pk=pk, order__customer=current_user)
             order_product.delete()
 
             return Response({}, status=status.HTTP_204_NO_CONTENT)
-
+        
+        except Order.DoesNotExist:
+            return Response({"message": "No open cart found."}, status=status.HTTP_404_NOT_FOUND)
+        
         except OrderProduct.DoesNotExist as ex:
             return Response({"message": ex.args[0]}, status=status.HTTP_404_NOT_FOUND)
 
@@ -69,15 +73,17 @@ class Cart(ViewSet):
             return Response(
                 {"message": ex.args[0]}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-    # TODO: When a Cart model is introduced (ticket 60), replace the Order lookup below with Cart.objects.get(customer=current_user). The open/closed Order pattern (payment_type=None as cart) will be completely removed once the Cart model ticket go through.
-
-    url_path = ''   
-    @action(detail=False, methods=['delete'], url_path='')
+    # TODO: When a Cart model is introduced replace the delete_all action 
+  
+    @action(detail=False, methods=['delete'])
     def delete_all(self, request):
+
         current_user = Customer.objects.get(user=request.auth.user)
         open_order = Order.objects.get(customer=current_user, payment_type=None)
-        open_order.delete()
+        OrderProduct.objects.filter(order=open_order).delete()
+
         return Response({}, status=status.HTTP_204_NO_CONTENT)
+
     
     def list(self, request):
         """
