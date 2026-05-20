@@ -29,21 +29,18 @@ class Stores(viewsets.ViewSet):
     permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
 
     def create(self, request):
-       
-
-
-        new_store = Store()
-        new_store.name = request.data["name"]
-        new_store.description = request.data["description"]
         
         customer = Customer.objects.get(user=request.auth.user)
 
-        if customer.stores.all():
+        if hasattr(customer, 'store'): 
+             # customer.store() raises an error if no store exists with a OneToOneField, so hasattr is safer than accessing customer.store directly to check if one exists
             return response.Response(
                 {"message": "You already have a store."}, status=status.HTTP_400_BAD_REQUEST
-            )
+                )
         
-        
+        new_store = Store()
+        new_store.name = request.data["name"]
+        new_store.description = request.data["description"]
         new_store.customer = customer
         new_store.save()
 
