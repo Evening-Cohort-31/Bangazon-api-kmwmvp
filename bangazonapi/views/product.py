@@ -26,6 +26,14 @@ class ProductSerializer(serializers.ModelSerializer):
     """JSON serializer for products"""
 
     categories = CategorySummarySerializer(many=True, read_only=True)
+    is_liked = serializers.SerializerMethodField()
+
+    def get_is_liked(self, obj):
+        request = self.context.get("request")
+        if request and request.auth:
+            customer = Customer.objects.get(user=request.auth.user)
+            return customer.liked_products.filter(pk=obj.pk).exists()
+        return False
 
     class Meta:
         model = Product
@@ -42,6 +50,7 @@ class ProductSerializer(serializers.ModelSerializer):
             "image_path",
             "average_rating",
             "can_be_rated",
+            "is_liked",
         )
 
 
@@ -329,7 +338,7 @@ class Products(viewsets.ViewSet):
 
         if category is not None:
             products = products.filter(categories__id=category)
-        
+
         if location is not None:
             products = products.filter(location__contains=location)
 
@@ -374,3 +383,27 @@ class Products(viewsets.ViewSet):
             return response.Response(None, status=status.HTTP_204_NO_CONTENT)
 
         return response.Response(None, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    @action(methods=["post"], detail=True)
+    def like(self, request, pk=None):
+        try:
+            customer = Customer.objects.get(user=request.auth.user)
+            product = Product.objects.get(pk=pk)
+            customer.liked_products.add(product)
+            return response.Response(None, status=status.HTTP_204_NO_CONTENT)
+        except Product.DoesNotExist:
+            return response.Response(
+                {"message": "Product not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+    @action(methods=["delete"], detail=True)
+    def unlike(self, request, pk=None):
+        try:
+            customer = Customer.objects.get(user=request.auth.user)
+            product = Product.objects.get(pk=pk)
+            customer.liked_products.remove(product)
+            return response.Response(None, status=status.HTTP_204_NO_CONTENT)
+        except Product.DoesNotExist:
+            return response.Response(
+                {"message": "Product not found"}, status=status.HTTP_404_NOT_FOUND
+            )

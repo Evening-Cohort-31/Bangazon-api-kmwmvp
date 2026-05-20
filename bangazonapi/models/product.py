@@ -43,6 +43,9 @@ class Product(SafeDeleteModel):
         max_length=None,
         null=True,
     )
+    liked_by = models.ManyToManyField(
+        Customer, related_name="liked_products", blank=True
+    )
 
     @property
     def number_sold(self):
