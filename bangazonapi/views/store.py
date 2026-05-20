@@ -9,11 +9,20 @@ from rest_framework import (
 
 from bangazonapi.models import Customer, Store
 
+class SellerSerializer(serializers.ModelSerializer):
+    """JSON serializer for SELLER (store owner)"""
+    first_name = serializers.CharField(source='user.first_name')
+    last_name = serializers.CharField(source='user.last_name')
+    class Meta:
+        model = Customer
+        fields = ["first_name", "last_name"]
+
 class StoreSerializer(serializers.ModelSerializer):
      """JSON serializer for STORE SERIALIZER summary"""
+     seller = SellerSerializer(source='customer', read_only=True)
      class Meta:
           model = Store
-          fields = ["id", "name", "description", "customer_id"]
+          fields = ["id", "name", "description", "seller"]
 
 class Stores(viewsets.ViewSet):
     """Request handlers for Products in the Bangazon Platform"""
@@ -42,3 +51,13 @@ class Stores(viewsets.ViewSet):
             stores, many=True, context={"request": request}
         )
         return response.Response(serializer.data)
+    
+    def retrieve(self, request, pk=None):
+        try:
+            store = Store.objects.get(pk=pk)
+            serializer = StoreSerializer(store, context={"request": request})
+            return response.Response(serializer.data)
+        except Store.DoesNotExist:
+            return response.Response(
+                {"message": "Store not found."}, status=status.HTTP_404_NOT_FOUND
+            )
