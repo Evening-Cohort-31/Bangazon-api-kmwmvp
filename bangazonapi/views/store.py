@@ -30,15 +30,22 @@ class Stores(viewsets.ViewSet):
 
     def create(self, request):
        
+
+
         new_store = Store()
         new_store.name = request.data["name"]
         new_store.description = request.data["description"]
         
         customer = Customer.objects.get(user=request.auth.user)
+
+        if customer.stores.all():
+            return response.Response(
+                {"message": "You already have a store."}, status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        
         new_store.customer = customer
-
         new_store.save()
-
 
 
         serializer = StoreSerializer(new_store, context={"request": request})
