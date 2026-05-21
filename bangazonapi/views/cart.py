@@ -28,17 +28,13 @@ class Cart(ViewSet):
          # TODO: When a Cart model is introduced (ticket 60), replace the Order lookup below with Cart.objects.get(customer=current_user). The open/closed Order pattern (payment_type=None as cart) will be completely removed once the Cart model ticket go through.
 
         try:
-            open_order = Order.objects.get(
-                customer=current_user, payment_type__isnull=True)
-        except Order.DoesNotExist:
-            open_order = Order()
-            open_order.created_date = datetime.datetime.now()
-            open_order.customer = current_user
-            open_order.save()
+            user_cart = Cart.objects.get_or_create(
+                customer=current_user
+            )
 
         line_item = OrderProduct()
         line_item.product = Product.objects.get(pk=request.data["product_id"])
-        line_item.order = open_order
+        line_item.cart = open_order
         line_item.save()
 
         serialized = OrderLineItemSerializer(line_item, many=False)
@@ -58,12 +54,12 @@ class Cart(ViewSet):
         """
         try:
             current_user= Customer.objects.get(user=request.auth.user)
-            order_product = OrderProduct.objects.get(pk=pk, order__customer=current_user)
+            order_product = OrderProduct.objects.get(pk=pk, cart__customer=current_user)
             order_product.delete()
 
             return Response({}, status=status.HTTP_204_NO_CONTENT)
         
-        except Order.DoesNotExist:
+        except Cart.DoesNotExist:
             return Response({"message": "No open cart found."}, status=status.HTTP_404_NOT_FOUND)
         
         except OrderProduct.DoesNotExist as ex:
@@ -79,8 +75,8 @@ class Cart(ViewSet):
     def delete_all(self, request):
 
         current_user = Customer.objects.get(user=request.auth.user)
-        open_order = Order.objects.get(customer=current_user, payment_type=None)
-        OrderProduct.objects.filter(order=open_order).delete()
+        open_order = Cart.objects.get(customer=current_user)
+        OrderProduct.objects.filter(cart=open_order).delete()
 
         return Response({}, status=status.HTTP_204_NO_CONTENT)
 
@@ -107,7 +103,7 @@ class Cart(ViewSet):
                 "created_date": "2019-04-12",
                 "payment_type": null,
                 "customer": "http://localhost:8000/customers/7",
-                "products": [
+                "line_items": [
                     {
                         "id": 52,
                         "url": "http://localhost:8000/products/52",
@@ -132,13 +128,13 @@ class Cart(ViewSet):
         current_user = Customer.objects.get(user=request.auth.user)
 
         try:
-            open_order = Order.objects.get(
-                customer=current_user, payment_type=None)
+            open_order = Cart.objects.get(
+                customer=current_user)
             cart = {}
-            cart["order"] = OrderSerializer(open_order, many=False, context={
+            cart["order"] = CartSerializer(open_order, many=False, context={
                 'request': request}).data
 
-        except Order.DoesNotExist as ex:
+        except Cart.DoesNotExist as ex:
             return Response({'message': ex.args[0]}, status=status.HTTP_404_NOT_FOUND)
 
         return Response(cart["order"])
