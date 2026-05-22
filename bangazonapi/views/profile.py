@@ -11,7 +11,7 @@ from bangazonapi.models import Order, Customer, Product
 from bangazonapi.models import OrderProduct, Favorite
 from bangazonapi.models import Recommendation
 from .product import ProductSerializer
-from .order import OrderSerializer
+
 
 
 class Profile(ViewSet):
@@ -87,167 +87,9 @@ class Profile(ViewSet):
             serializer = ProfileSerializer(
                 current_user, many=False, context={'request': request})
 
-            return Response(serializer.data)
+            return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as ex:
             return HttpResponseServerError(ex)
-
-    @action(methods=['get', 'post', 'delete'], detail=False)
-    def cart(self, request):
-        """Shopping cart manipulation"""
-
-        current_user = Customer.objects.get(user=request.auth.user)
-
-        if request.method == "DELETE":
-            """
-            @api {DELETE} /profile/cart DELETE all line items in cart
-            @apiName DeleteCart
-            @apiGroup UserProfile
-
-            @apiHeader {String} Authorization Auth token
-            @apiHeaderExample {String} Authorization
-                Token 9ba45f09651c5b0c404f37a2d2572c026c146611
-
-            @apiSuccessExample {json} Success
-                HTTP/1.1 204 No Content
-            @apiError (404) {String} message  Not found message.
-            """
-            try:
-                open_order = Order.objects.get(
-                    customer=current_user, payment_type=None)
-                line_items = OrderProduct.objects.filter(order=open_order)
-                line_items.delete()
-                open_order.delete()
-            except Order.DoesNotExist as ex:
-                return Response({'message': ex.args[0]}, status=status.HTTP_404_NOT_FOUND)
-
-            return Response({}, status=status.HTTP_204_NO_CONTENT)
-
-        if request.method == "GET":
-            """
-            @api {GET} /profile/cart GET line items in cart
-            @apiName GetCart
-            @apiGroup UserProfile
-
-            @apiHeader {String} Authorization Auth token
-            @apiHeaderExample {String} Authorization
-                Token 9ba45f09651c5b0c404f37a2d2572c026c146611
-
-            @apiSuccess (200) {Number} id Order cart
-            @apiSuccess (200) {String} url URL of order
-            @apiSuccess (200) {String} created_date Date created
-            @apiSuccess (200) {Object} payment_type Payment Id used to complete order
-            @apiSuccess (200) {String} customer URI for customer
-            @apiSuccess (200) {Number} size Number of items in cart
-            @apiSuccess (200) {Object[]} line_items Line items in cart
-            @apiSuccess (200) {Number} line_items.id Line item id
-            @apiSuccess (200) {Object} line_items.product Product in cart
-            @apiSuccessExample {json} Success
-                {
-                    "id": 2,
-                    "url": "http://localhost:8000/orders/2",
-                    "created_date": "2019-04-12",
-                    "payment_type": null,
-                    "customer": "http://localhost:8000/customers/7",
-                    "line_items": [
-                        {
-                            "id": 4,
-                            "product": {
-                                "id": 52,
-                                "url": "http://localhost:8000/products/52",
-                                "name": "900",
-                                "price": 1296.98,
-                                "number_sold": 0,
-                                "description": "1987 Saab",
-                                "quantity": 2,
-                                "created_date": "2019-03-19",
-                                "location": "Vratsa",
-                                "image_path": null,
-                                "average_rating": 0,
-                                "category": {
-                                    "url": "http://localhost:8000/productcategories/2",
-                                    "name": "Auto"
-                                }
-                            }
-                        }
-                    ],
-                    "size": 1
-                }
-            @apiError (404) {String} message  Not found message
-            """
-            try:
-                open_order = Order.objects.get(
-                    customer=current_user, payment_type=None)
-                cart = {}
-                cart["order"] = OrderSerializer(open_order, many=False, context={
-                                                'request': request}).data
-
-            except Order.DoesNotExist as ex:
-                return Response({'message': ex.args[0]}, status=status.HTTP_404_NOT_FOUND)
-
-            return Response(cart["order"])
-
-        if request.method == "POST":
-            """
-            @api {POST} /profile/cart POST new product to cart
-            @apiName AddToCart
-            @apiGroup UserProfile
-
-            @apiHeader {String} Authorization Auth token
-            @apiHeaderExample {String} Authorization
-                Token 9ba45f09651c5b0c404f37a2d2572c026c146611
-
-            @apiSuccess (200) {Object} line_item Line items in cart
-            @apiSuccess (200) {Number} line_item.id Line item id
-            @apiSuccess (200) {Object} line_item.product Product in cart
-            @apiSuccess (200) {Object} line_item.order Open order for cart
-            @apiSuccessExample {json} Success
-                {
-                    "id": 14,
-                    "product": {
-                        "url": "http://localhost:8000/products/52",
-                        "deleted": null,
-                        "name": "900",
-                        "price": 1296.98,
-                        "description": "1987 Saab",
-                        "quantity": 2,
-                        "created_date": "2019-03-19",
-                        "location": "Vratsa",
-                        "image_path": null,
-                        "customer": "http://localhost:8000/customers/7",
-                        "category": "http://localhost:8000/productcategories/2"
-                    },
-                    "order": {
-                        "url": "http://localhost:8000/orders/2",
-                        "created_date": "2019-04-12",
-                        "customer": "http://localhost:8000/customers/7",
-                        "payment_type": null
-                    }
-                }
-
-            @apiError (404) {String} message  Not found message
-            """
-
-            try:
-                open_order = Order.objects.get(customer=current_user)
-                print(open_order)
-            except Order.DoesNotExist as ex:
-                open_order = Order()
-                open_order.created_date = datetime.datetime.now()
-                open_order.customer = current_user
-                open_order.save()
-
-            line_item = OrderProduct()
-            line_item.product = Product.objects.get(
-                pk=request.data["product_id"])
-            line_item.order = open_order
-            line_item.save()
-
-            line_item_json = LineItemSerializer(
-                line_item, many=False, context={'request': request})
-
-            return Response(line_item_json.data)
-
-        return Response({}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
     @action(methods=['get'], detail=False)
     def favoritesellers(self, request):
@@ -365,11 +207,12 @@ class ProfileSerializer(serializers.ModelSerializer):
     """
     user = UserSerializer(many=False)
     recommends = RecommenderSerializer(many=True)
+    likes = ProfileProductSerializer(source='liked_products', many=True)
 
     class Meta:
         model = Customer
         fields = ('id', 'url', 'user', 'phone_number',
-                  'address', 'payment_types', 'recommends',)
+                  'address', 'payment_types', 'recommends', 'likes',)
         depth = 1
 
 
