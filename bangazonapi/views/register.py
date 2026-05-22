@@ -10,7 +10,7 @@ from django.core.exceptions import ValidationError
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import status
 from rest_framework.authtoken.models import Token
-from bangazonapi.models import Customer
+from bangazonapi.models import Customer, Cart
 
 User = get_user_model()
 
@@ -111,11 +111,14 @@ def register_user(request):
                 req_body.setdefault("phone_number", "")
                 req_body.setdefault("address", "")
 
-                Customer.objects.create(
+                new_customer = Customer.objects.create(
                     phone_number=req_body["phone_number"],
                     address=req_body["address"],
                     user=new_user,
                 )
+
+                # Create a new cart for the new user
+                Cart.objects.create(customer=new_customer)
 
                 # Use the REST Framework's token generator on the new user account
                 token = Token.objects.create(user=new_user)

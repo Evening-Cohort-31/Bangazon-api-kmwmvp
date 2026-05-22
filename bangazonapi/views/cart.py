@@ -1,86 +1,42 @@
 """View module for handling requests about customer shopping cart"""
-import datetime
+
 from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from rest_framework import status
-from bangazonapi.models import Order, Customer, Product, OrderProduct
-from .order import OrderSerializer, OrderLineItemSerializer
+from rest_framework import status, serializers
+from bangazonapi.models import Customer, Product, OrderProduct, Cart
+from bangazonapi.views import ProductSerializer
 
 
-class Cart(ViewSet):
+class LineItemSerializer(serializers.ModelSerializer):
+    """Nested Serializer for Lineitems (cart items) inside the Cart"""
+
+    product = ProductSerializer()
+
+    class Meta:
+        model = OrderProduct
+        fields = ("id", "product")
+
+
+class CartSerializer(serializers.ModelSerializer):
+    """JSON serializer for cart"""
+
+    # set many=True because a cart can have many line items
+    # set read_only=True since the serializer is only used to display line items in the cart, not create them
+    lineitems = LineItemSerializer(many=True, read_only=True)
+    size = serializers.SerializerMethodField()
+
+    def get_size(self, obj):
+        return obj.lineitems.count()
+
+    class Meta:
+        model = Cart
+        fields = ["id", "lineitems", "size"]
+
+
+class CartViewSet(ViewSet):
     """Shopping cart for Bangazon eCommerce"""
 
-    def create(self, request):
-        """
-        @api {POST} /cart POST new line items to cart
-        @apiName AddLineItem
-        @apiGroup ShoppingCart
-
-        @apiSuccessExample {json} Success
-            HTTP/1.1 201 Created
-        @apiParam {Number} product_id Id of product to add
-        """
-        current_user = Customer.objects.get(user=request.auth.user)
-
-        # TODO: When a Cart model is introduced (ticket 60), this lazy Order creation will be replaced with Cart.objects.get_or_create(customer=current_user)
-
-         # TODO: When a Cart model is introduced (ticket 60), replace the Order lookup below with Cart.objects.get(customer=current_user). The open/closed Order pattern (payment_type=None as cart) will be completely removed once the Cart model ticket go through.
-
-        try:
-            user_cart = Cart.objects.get_or_create(
-                customer=current_user
-            )
-
-        line_item = OrderProduct()
-        line_item.product = Product.objects.get(pk=request.data["product_id"])
-        line_item.cart = open_order
-        line_item.save()
-
-        serialized = OrderLineItemSerializer(line_item, many=False)
-
-        return Response(serialized.data, status=status.HTTP_201_CREATED)
-
-
-    def destroy(self, request, pk=None):
-        """
-        @api {DELETE} /cart/:id DELETE line item from cart
-        @apiName RemoveLineItem
-        @apiGroup ShoppingCart
-
-        @apiParam {id} id Product Id to remove from cart
-        @apiSuccessExample {json} Success
-            HTTP/1.1 204 No Content
-        """
-        try:
-            current_user= Customer.objects.get(user=request.auth.user)
-            order_product = OrderProduct.objects.get(pk=pk, cart__customer=current_user)
-            order_product.delete()
-
-            return Response({}, status=status.HTTP_204_NO_CONTENT)
-        
-        except Cart.DoesNotExist:
-            return Response({"message": "No open cart found."}, status=status.HTTP_404_NOT_FOUND)
-        
-        except OrderProduct.DoesNotExist as ex:
-            return Response({"message": ex.args[0]}, status=status.HTTP_404_NOT_FOUND)
-
-        except Exception as ex:
-            return Response(
-                {"message": ex.args[0]}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-    # TODO: When a Cart model is introduced replace the delete_all action 
-  
-    @action(detail=False, methods=['delete'])
-    def delete_all(self, request):
-
-        current_user = Customer.objects.get(user=request.auth.user)
-        open_order = Cart.objects.get(customer=current_user)
-        OrderProduct.objects.filter(cart=open_order).delete()
-
-        return Response({}, status=status.HTTP_204_NO_CONTENT)
-
-    
     def list(self, request):
         """
         @api {GET} /cart GET line items in cart
@@ -126,15 +82,63 @@ class Cart(ViewSet):
             }
         """
         current_user = Customer.objects.get(user=request.auth.user)
+        user_cart, _ = Cart.objects.get_or_create(customer=current_user)
 
+        serialized_cart = CartSerializer(user_cart, context={"request": request})
+        return Response(serialized_cart.data)
+
+    def create(self, request):
+        """
+        @api {POST} /cart POST new line items to cart
+        @apiName AddLineItem
+        @apiGroup ShoppingCart
+
+        @apiSuccessExample {json} Success
+            HTTP/1.1 201 Created
+        @apiParam {Number} product_id Id of product to add
+        """
+        current_user = Customer.objects.get(user=request.auth.user)
+
+        user_cart, _ = Cart.objects.get_or_create(customer=current_user)
+
+        line_item = OrderProduct()
+        line_item.product = Product.objects.get(pk=request.data["product_id"])
+        line_item.cart = user_cart
+        line_item.save()
+
+        serialized_cart = LineItemSerializer(line_item, context={"request": request})
+        return Response(serialized_cart.data, status=status.HTTP_201_CREATED)
+
+    def destroy(self, request, pk=None):
+        """
+        @api {DELETE} /cart/:id DELETE line item from cart
+        @apiName RemoveLineItem
+        @apiGroup ShoppingCart
+
+        @apiParam {id} id Product Id to remove from cart
+        @apiSuccessExample {json} Success
+            HTTP/1.1 204 No Content
+        """
         try:
-            open_order = Cart.objects.get(
-                customer=current_user)
-            cart = {}
-            cart["order"] = CartSerializer(open_order, many=False, context={
-                'request': request}).data
+            current_user = Customer.objects.get(user=request.auth.user)
+            order_product = OrderProduct.objects.get(pk=pk, cart__customer=current_user)
+            order_product.delete()
 
-        except Cart.DoesNotExist as ex:
-            return Response({'message': ex.args[0]}, status=status.HTTP_404_NOT_FOUND)
+            return Response({}, status=status.HTTP_204_NO_CONTENT)
 
-        return Response(cart["order"])
+        except Exception as ex:
+            return Response(
+                {"message": ex.args[0]}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        except OrderProduct.DoesNotExist as ex:
+            return Response({"message": ex.args[0]}, status=status.HTTP_404_NOT_FOUND)
+
+    @action(detail=False, methods=["delete"], url_path="")
+    def delete_all(self, request):
+
+        current_user = Customer.objects.get(user=request.auth.user)
+        open_order = Cart.objects.get(customer=current_user)
+        OrderProduct.objects.filter(cart=open_order).delete()
+
+        return Response({}, status=status.HTTP_204_NO_CONTENT)
