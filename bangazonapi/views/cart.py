@@ -137,7 +137,7 @@ class CartViewSet(ViewSet):
                 {"message": ex.args[0]}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-    @action(detail=False, methods=["delete"], url_path="")
+    @action(detail=False, methods=["delete"])
     def delete_all(self, request):
 
         current_user = Customer.objects.get(user=request.auth.user)
