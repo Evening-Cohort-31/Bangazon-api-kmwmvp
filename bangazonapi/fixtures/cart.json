@@ -1,0 +1,30 @@
+[
+    {
+        "model": "bangazonapi.cart",
+        "pk": 1,
+        "fields": {
+            "customer_id": 6
+        }
+    },
+    {
+        "model": "bangazonapi.cart",
+        "pk": 2,
+        "fields": {
+            "customer_id": 4
+        }
+    },
+    {
+        "model": "bangazonapi.cart",
+        "pk": 3,
+        "fields": {
+            "customer_id": 5
+        }
+    },
+    {
+        "model": "bangazonapi.cart",
+        "pk": 4,
+        "fields": {
+            "customer_id": 7
+        }
+    }
+]
