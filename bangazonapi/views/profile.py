@@ -11,6 +11,8 @@ from bangazonapi.models import Order, Customer, Product
 from bangazonapi.models import OrderProduct, Favorite
 from bangazonapi.models import Recommendation
 from .product import ProductSerializer
+from .order import OrderSerializer
+from .store import StoreSerializer;
 
 
 
@@ -207,11 +209,13 @@ class ProfileSerializer(serializers.ModelSerializer):
     """
     user = UserSerializer(many=False)
     recommends = RecommenderSerializer(many=True)
+    store = StoreSerializer(read_only=True) 
     likes = ProfileProductSerializer(source='liked_products', many=True)
 
     class Meta:
         model = Customer
         fields = ('id', 'url', 'user', 'phone_number',
+                  'address', 'payment_types', 'recommends', 'store')
                   'address', 'payment_types', 'recommends', 'likes',)
         depth = 1
 
