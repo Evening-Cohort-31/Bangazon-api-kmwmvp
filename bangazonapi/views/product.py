@@ -1,6 +1,7 @@
 """View module for handling requests about products"""
 
 import base64
+from decimal import Decimal
 
 from django.core.files.base import ContentFile
 from rest_framework import (
@@ -26,6 +27,14 @@ class ProductSerializer(serializers.ModelSerializer):
     """JSON serializer for products"""
 
     categories = CategorySummarySerializer(many=True, read_only=True)
+    is_liked = serializers.SerializerMethodField()
+
+    def get_is_liked(self, obj):
+        request = self.context.get("request")
+        if request and request.auth:
+            customer = Customer.objects.get(user=request.auth.user)
+            return customer.liked_products.filter(pk=obj.pk).exists()
+        return False
 
     class Meta:
         model = Product
@@ -42,6 +51,7 @@ class ProductSerializer(serializers.ModelSerializer):
             "image_path",
             "average_rating",
             "can_be_rated",
+            "is_liked",
         )
 
 
@@ -117,13 +127,20 @@ class Products(viewsets.ViewSet):
         """
         new_product = Product()
         new_product.name = request.data["name"]
-        new_product.price = request.data["price"]
+        new_product.price = Decimal(request.data["price"])
         new_product.description = request.data["description"]
         new_product.quantity = request.data["quantity"]
         new_product.location = request.data["location"]
 
         customer = Customer.objects.get(user=request.auth.user)
         new_product.customer = customer
+
+        if new_product.price < Decimal("0.00"):
+            return response.Response({"message" : "Product price cannot be negative."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if new_product.price > Decimal("17500.00"):
+            return response.Response({"message" : "Product price needs to be no more than 17,500"}, status=status.HTTP_400_BAD_REQUEST)
+
 
         new_product.save()
 
@@ -222,12 +239,30 @@ class Products(viewsets.ViewSet):
         product.description = request.data.get("description", product.description)
         product.quantity = request.data.get("quantity", product.quantity)
         product.location = request.data.get("location", product.location)
+
+        if "price" in request.data:
+            try:
+                product.price = Decimal(str(request.data["price"]))
+            except Exception:
+                return response.Response(
+                    {"message": "Invalid price format."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        if product.price < Decimal("0.00"):
+            return response.Response({"message" : "Product price cannot be negative."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if product.price > Decimal("17500.00"):
+            return response.Response({"message" : "Product price needs to be no more than 17,500"}, status=status.HTTP_400_BAD_REQUEST)
+        
         product.save()
 
         if "category_ids" in request.data:
             product.categories.set(request.data["category_ids"])
+        
+        serialized = ProductSerializer(product, context={"request": request})
 
-        return response.Response({}, status=status.HTTP_204_NO_CONTENT)
+        return response.Response(serialized.data, status=status.HTTP_200_OK)
 
     def destroy(self, request, pk=None):
         """
@@ -325,7 +360,7 @@ class Products(viewsets.ViewSet):
 
         if category is not None:
             products = products.filter(categories__id=category)
-        
+
         if location is not None:
             products = products.filter(location__contains=location)
 
@@ -370,3 +405,27 @@ class Products(viewsets.ViewSet):
             return response.Response(None, status=status.HTTP_204_NO_CONTENT)
 
         return response.Response(None, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    @action(methods=["post"], detail=True)
+    def like(self, request, pk=None):
+        try:
+            customer = Customer.objects.get(user=request.auth.user)
+            product = Product.objects.get(pk=pk)
+            customer.liked_products.add(product)
+            return response.Response(None, status=status.HTTP_204_NO_CONTENT)
+        except Product.DoesNotExist:
+            return response.Response(
+                {"message": "Product not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+    @action(methods=["delete"], detail=True)
+    def unlike(self, request, pk=None):
+        try:
+            customer = Customer.objects.get(user=request.auth.user)
+            product = Product.objects.get(pk=pk)
+            customer.liked_products.remove(product)
+            return response.Response(None, status=status.HTTP_204_NO_CONTENT)
+        except Product.DoesNotExist:
+            return response.Response(
+                {"message": "Product not found"}, status=status.HTTP_404_NOT_FOUND
+            )

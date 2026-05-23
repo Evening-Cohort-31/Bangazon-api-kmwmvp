@@ -8,12 +8,16 @@ https://docs.djangoproject.com/en/2.2/topics/settings/
 
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/2.2/ref/settings/
+
+UPDATED: Bangazon-API-KMWMVP is Django 6.0.4 so some of the settings in this file are deprecated for modern versions of Django.
+Please refer to the Django documentation for the most up-to-date settings and configurations.
 """
 
 import os
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Modern Django Version: BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 # Quick-start development settings - unsuitable for production
@@ -23,6 +27,9 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = ")!ktne!^&jd0sshf7h2*1zm*_b_m8m9+699)^7yi9_6^0!ktnm"
 
 # SECURITY WARNING: don't run with debug turned on in production!
+# DEBUG = True gives detailed error messages and stack traces in the browser when an error occurs.
+# Makes huge yellow debug screens with a lot of error information when true
+# Helpful for development, but exposes sensitive information about the application in production.
 DEBUG = True
 
 ALLOWED_HOSTS = []
@@ -38,9 +45,9 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "rest_framework",
     "rest_framework.authtoken",
-    "corsheaders",
+    "corsheaders",  # allows cross origin requests in the browser
     "bangazonapi",
-    "safedelete",
+    "safedelete",  # allows for soft deletion of data
 ]
 
 REST_FRAMEWORK = {
@@ -73,7 +80,7 @@ ROOT_URLCONF = "bangazon.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR + "/templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [

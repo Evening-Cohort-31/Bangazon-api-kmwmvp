@@ -21,7 +21,7 @@ class Product(SafeDeleteModel):
     price = models.DecimalField(
         max_digits=10,
         decimal_places=2,
-        validators=[MinValueValidator(0.00), MaxValueValidator(10000.00)],
+        validators=[MinValueValidator(0.00), MaxValueValidator(17500.00)],
     )
     description = models.CharField(
         max_length=255,
@@ -42,6 +42,9 @@ class Product(SafeDeleteModel):
         width_field=None,
         max_length=None,
         null=True,
+    )
+    liked_by = models.ManyToManyField(
+        Customer, related_name="liked_products", blank=True
     )
 
     @property
