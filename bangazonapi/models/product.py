@@ -1,4 +1,4 @@
-"""Product model for Bangazon API"""
+"""Model for Products within Bangazon"""
 
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models

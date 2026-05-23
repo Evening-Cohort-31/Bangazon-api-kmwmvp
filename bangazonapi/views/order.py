@@ -12,7 +12,7 @@ from .paymenttype import PaymentSerializer
 
 
 class OrderLineItemSerializer(serializers.ModelSerializer):
-    """JSON serializer for line items"""
+    """JSON serializer for lineitems on an order"""
 
     product = LineItemProductSerializer()
 
@@ -26,11 +26,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
     lineitems = OrderLineItemSerializer(many=True, read_only=True)
     payment_type = PaymentSerializer(many=False)
-    total = serializers.SerializerMethodField()
     size = serializers.SerializerMethodField()
-
-    def get_total(self, obj):
-        return sum([item.product.price for item in obj.lineitems.all()])
 
     def get_size(self, obj):
         return obj.lineitems.count()
@@ -183,9 +179,22 @@ class OrderViewSet(ViewSet):
                     "customer": "Steve Rogers",
                     "lineitems": [
                         {
-                            "id": 1,
-                            "product": "http://localhost:8000/products/1",
-                            "quantity": 2
+                            "id": 52,
+                            "product": {
+                                "name": "900",
+                                "price": 1296.98,
+                                "number_sold": 0,
+                                "description": "1987 Saab",
+                                "quantity": 2,
+                                "created_date": "2019-03-19",
+                                "location": "Vratsa",
+                                "image_path": null,
+                                "average_rating": 0,
+                                "category": {
+                                    "url": "http://localhost:8000/productcategories/2",
+                                    "name": "Auto"
+                                }
+                            }
                         }
                     ]
                 }

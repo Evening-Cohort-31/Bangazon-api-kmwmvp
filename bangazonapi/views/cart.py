@@ -24,14 +24,10 @@ class CartSerializer(serializers.ModelSerializer):
     # set many=True because a cart can have many line items
     # set read_only=True since the serializer is only used to display line items in the cart, not create them
     lineitems = CartLineItemSerializer(many=True, read_only=True)
-    total = serializers.SerializerMethodField()
     size = serializers.SerializerMethodField()
 
     def get_size(self, obj):
         return obj.lineitems.count()
-
-    def get_total(self, obj):
-        return sum([item.product.price for item in obj.lineitems.all()])
 
     class Meta:
         model = Cart
@@ -39,7 +35,7 @@ class CartSerializer(serializers.ModelSerializer):
 
 
 class CartViewSet(ViewSet):
-    """Shopping cart for Bangazon eCommerce"""
+    """Shopping cart API methods for Bangazon eCommerce"""
 
     def list(self, request):
         """
