@@ -55,7 +55,19 @@ class ProductSerializer(serializers.ModelSerializer):
         )
 
 
-class Products(viewsets.ViewSet):
+class LineItemProductSerializer(serializers.ModelSerializer):
+    is_liked = serializers.SerializerMethodField()
+
+    def get_is_liked(self, obj):
+        customer = Customer.objects.get(user=self.context["request"].auth.user)
+        return obj.liked_by.filter(id=customer.id).exists()
+
+    class Meta:
+        model = Product
+        fields = ("id", "name", "price", "description", "is_liked")
+
+
+class ProductViewSet(viewsets.ViewSet):
     """Request handlers for Products in the Bangazon Platform"""
 
     permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
@@ -136,11 +148,16 @@ class Products(viewsets.ViewSet):
         new_product.customer = customer
 
         if new_product.price < Decimal("0.00"):
-            return response.Response({"message" : "Product price cannot be negative."}, status=status.HTTP_400_BAD_REQUEST)
+            return response.Response(
+                {"message": "Product price cannot be negative."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         if new_product.price > Decimal("17500.00"):
-            return response.Response({"message" : "Product price needs to be no more than 17,500"}, status=status.HTTP_400_BAD_REQUEST)
-
+            return response.Response(
+                {"message": "Product price needs to be no more than 17,500"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         new_product.save()
 
@@ -246,20 +263,26 @@ class Products(viewsets.ViewSet):
             except Exception:
                 return response.Response(
                     {"message": "Invalid price format."},
-                    status=status.HTTP_400_BAD_REQUEST
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
 
         if product.price < Decimal("0.00"):
-            return response.Response({"message" : "Product price cannot be negative."}, status=status.HTTP_400_BAD_REQUEST)
+            return response.Response(
+                {"message": "Product price cannot be negative."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         if product.price > Decimal("17500.00"):
-            return response.Response({"message" : "Product price needs to be no more than 17,500"}, status=status.HTTP_400_BAD_REQUEST)
-        
+            return response.Response(
+                {"message": "Product price needs to be no more than 17,500"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         product.save()
 
         if "category_ids" in request.data:
             product.categories.set(request.data["category_ids"])
-        
+
         serialized = ProductSerializer(product, context={"request": request})
 
         return response.Response(serialized.data, status=status.HTTP_200_OK)

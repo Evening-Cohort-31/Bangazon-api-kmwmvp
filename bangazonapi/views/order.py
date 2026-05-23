@@ -1,36 +1,31 @@
-"""View module for handling requests about customer order"""
+"""View module for handling requests about customer orders"""
 
 import datetime
+from PIL.Image import item
 from django.http import HttpResponseServerError
 from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
-from rest_framework import serializers
-from rest_framework import status
-from rest_framework.decorators import action
-from bangazonapi.models import Order, Payment, Customer, Product, OrderProduct
-from .product import ProductSerializer
+from rest_framework import serializers, status
+from bangazonapi.models import Order, Payment, Customer, OrderProduct, Cart, CartProduct
+from .product import LineItemProductSerializer
 from .paymenttype import PaymentSerializer
 
 
-class OrderLineItemSerializer(serializers.HyperlinkedModelSerializer):
+class OrderLineItemSerializer(serializers.ModelSerializer):
     """JSON serializer for line items"""
 
-    product = ProductSerializer(many=False)
+    product = LineItemProductSerializer()
 
     class Meta:
         model = OrderProduct
-        url = serializers.HyperlinkedIdentityField(
-            view_name="lineitem", lookup_field="id"
-        )
         fields = ("id", "product")
-        depth = 1
 
 
-class OrderSerializer(serializers.HyperlinkedModelSerializer):
+class OrderSerializer(serializers.ModelSerializer):
     """JSON serializer for customer orders"""
 
-    lineitems = OrderLineItemSerializer(many=True)
-    payment_type = PaymentSerializer(many=False, allow_null=True)
+    lineitems = OrderLineItemSerializer(many=True, read_only=True)
+    payment_type = PaymentSerializer(many=False)
     total = serializers.SerializerMethodField()
     size = serializers.SerializerMethodField()
 
@@ -42,10 +37,8 @@ class OrderSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = Order
-        url = serializers.HyperlinkedIdentityField(view_name="order", lookup_field="id")
         fields = (
             "id",
-            "url",
             "created_date",
             "payment_type",
             "customer",
@@ -55,12 +48,12 @@ class OrderSerializer(serializers.HyperlinkedModelSerializer):
         )
 
 
-class Orders(ViewSet):
+class OrderViewSet(ViewSet):
     """View for interacting with customer orders"""
 
     def retrieve(self, request, pk=None):
         """
-        @api {GET} /cart/:id GET single order
+        @api {GET} /orders/:id GET single order
         @apiName GetOrder
         @apiGroup Orders
 
@@ -69,7 +62,6 @@ class Orders(ViewSet):
             Token 9ba45f09651c5b0c404f37a2d2572c026c146611
 
         @apiSuccess (200) {id} id Order id
-        @apiSuccess (200) {String} url Order URI
         @apiSuccess (200) {String} created_date Date order was created
         @apiSuccess (200) {String} payment_type Payment URI
         @apiSuccess (200) {String} customer Customer URI
@@ -77,11 +69,30 @@ class Orders(ViewSet):
         @apiSuccessExample {json} Success
             {
                 "id": 1,
-                "url": "http://localhost:8000/orders/1",
                 "created_date": "2019-08-16",
-                "payment_type": "http://localhost:8000/paymenttypes/1",
-                "customer": "http://localhost:8000/customers/5"
-            }
+                "payment_type": 1,
+                "customer": "Steve Rogers",
+                "lineitems": [
+                    {
+                        "id": 1,
+                        "product": {
+                            "name": "900",
+                            "price": 1296.98,
+                            "number_sold": 0,
+                            "description": "1987 Saab",
+                            "quantity": 2,
+                            "created_date": "2019-03-19",
+                            "location": "Vratsa",
+                            "image_path": null,
+                            "average_rating": 0,
+                            "category": {
+                                    "name": "Auto"
+                                },
+                            }
+                        ],
+                "total": 1296.98,
+                "size": 1
+                    }
         """
         try:
             customer = Customer.objects.get(user=request.auth.user)
@@ -100,9 +111,9 @@ class Orders(ViewSet):
         except Exception as ex:
             return HttpResponseServerError(ex)
 
-    def update(self, request, pk=None):
+    def create(self, request, pk=None):
         """
-        @api {PUT} /order/:id PUT new payment for order
+        @api {PUT} /orders/:id PUT new payment for order
         @apiName AddPayment
         @apiGroup Orders
 
@@ -121,12 +132,29 @@ class Orders(ViewSet):
             HTTP/1.1 204 No Content
         """
         customer = Customer.objects.get(user=request.auth.user)
-        order = Order.objects.get(pk=pk, customer=customer)
-        payment = Payment.objects.get(pk=request.data["payment_type"])
-        order.payment_type = payment
-        order.save()
+        # Handle case where cart is empty and order is created without line items
+        try:
+            customer_cart = Cart.objects.get(customer=customer)
+            payment = Payment.objects.get(pk=request.data["payment_type"])
+            created_date = datetime.datetime.now()
 
-        return Response({}, status=status.HTTP_204_NO_CONTENT)
+            customer_order = Order.objects.create(
+                customer=customer, payment_type=payment, created_date=created_date
+            )
+
+            for item in CartProduct.objects.filter(cart=customer_cart):
+                OrderProduct.objects.create(order=customer_order, product=item.product)
+
+            CartProduct.objects.filter(cart=customer_cart).delete()
+
+            customer_cart.delete()
+
+            return Response({}, status=status.HTTP_204_NO_CONTENT)
+        except Cart.DoesNotExist:
+            return Response(
+                {"message": "The cart is empty."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
     def list(self, request):
         """
@@ -142,7 +170,6 @@ class Orders(ViewSet):
 
         @apiSuccess (200) {Object[]} orders Array of order objects
         @apiSuccess (200) {id} orders.id Order id
-        @apiSuccess (200) {String} orders.url Order URI
         @apiSuccess (200) {String} orders.created_date Date order was created
         @apiSuccess (200) {String} orders.payment_type Payment URI
         @apiSuccess (200) {String} orders.customer Customer URI
@@ -151,19 +178,25 @@ class Orders(ViewSet):
             [
                 {
                     "id": 1,
-                    "url": "http://localhost:8000/orders/1",
                     "created_date": "2019-08-16",
-                    "payment_type": "http://localhost:8000/paymenttypes/1",
-                    "customer": "http://localhost:8000/customers/5"
+                    "payment_type": 1,
+                    "customer": "Steve Rogers",
+                    "lineitems": [
+                        {
+                            "id": 1,
+                            "product": "http://localhost:8000/products/1",
+                            "quantity": 2
+                        }
+                    ]
                 }
             ]
         """
         customer = Customer.objects.get(user=request.auth.user)
-        orders = Order.objects.filter(customer=customer)
+        orders = Order.objects.filter(customer=customer, payment_type__isnull=False)
 
-        payment = self.request.query_params.get("payment_id", None)
+        payment = request.query_params.get("payment_id", None)
         if payment is not None:
-            orders = orders.filter(payment__id=payment)
+            orders = orders.filter(payment_type__id=payment)
 
         json_orders = OrderSerializer(orders, many=True, context={"request": request})
 
