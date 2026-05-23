@@ -14,3 +14,8 @@ class Order(models.Model):
     created_date = models.DateField(
         default="0000-00-00",
     )
+
+    # add a total property the model giving the total of the order based on its line items
+    @property
+    def total(self):
+        return sum(item.product.price for item in self.lineitems.all())
