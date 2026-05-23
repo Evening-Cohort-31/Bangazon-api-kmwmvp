@@ -9,4 +9,5 @@ from .category import ProductCategories
 from .lineitem import LineItems
 from .customer import Customers
 from .user import Users
+from .store import Stores
 from .report import completed_orders_report

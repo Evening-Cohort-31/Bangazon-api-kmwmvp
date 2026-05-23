@@ -56,6 +56,20 @@ class Cart(ViewSet):
         @apiSuccessExample {json} Success
             HTTP/1.1 204 No Content
         """
+        current_user = Customer.objects.get(user=request.auth.user)
+        open_order = Order.objects.get(
+            customer=current_user, payment_type=None)
+
+        line_item = OrderProduct.objects.filter(
+                order=open_order,
+                product_id=pk
+        ).first()
+
+        if line_item:
+            line_item.delete()
+
+        return Response({}, status=status.HTTP_204_NO_CONTENT)
+    
         try:
             current_user= Customer.objects.get(user=request.auth.user)
             order_product = OrderProduct.objects.get(pk=pk, order__customer=current_user)
