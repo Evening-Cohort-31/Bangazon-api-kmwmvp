@@ -1,4 +1,4 @@
-"""Product model for Bangazon API"""
+"""Model for Products within Bangazon"""
 
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
@@ -21,7 +21,7 @@ class Product(SafeDeleteModel):
     price = models.DecimalField(
         max_digits=10,
         decimal_places=2,
-        validators=[MinValueValidator(0.00), MaxValueValidator(10000.00)],
+        validators=[MinValueValidator(0.00), MaxValueValidator(17500.00)],
     )
     description = models.CharField(
         max_length=255,
@@ -54,9 +54,7 @@ class Product(SafeDeleteModel):
         Returns:
             int -- Number items on completed orders
         """
-        sold = OrderProduct.objects.filter(
-            product=self, order__payment_type__isnull=False
-        )
+        sold = OrderProduct.objects.filter(product=self)
         return sold.count()
 
     @property
@@ -79,7 +77,9 @@ class Product(SafeDeleteModel):
         Returns:
             number -- The average rating for the product
         """
-        result = ProductRating.objects.filter(product=self).aggregate(models.Avg("rating"))
+        result = ProductRating.objects.filter(product=self).aggregate(
+            models.Avg("rating")
+        )
         return result["rating__avg"] or 0
 
     class Meta:

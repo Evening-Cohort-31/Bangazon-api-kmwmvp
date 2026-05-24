@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<!--
+    This page is rendered directly by Django on the server and returned as plain HTML.
+    It does not require the Next.js frontend client. You can visit it directly in the
+    browser at http://localhost:8000/reports/completed_orders while the Django dev server is running.
+-->
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Orders Report</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 2rem;
+            background-color: #f4f6f9;
+            color: #293241;
+        }
+
+        h1 {
+            color: #3d5a80;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        th {
+            background-color: #3d5a80;
+            color: #ffffff;
+            padding: 0.6rem 1rem;
+            text-align: left;
+        }
+
+        td {
+            padding: 0.6rem 1rem;
+            border-bottom: 1px solid #98c1d9;
+        }
+
+        tr:hover td {
+            background-color: #e8f0f7;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Orders Report</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Order ID</th>
+                <th>Customer</th>
+                <th>Total</th>
+                <th>Payment Type</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!--
+                "completed_orders" is the list of Order objects passed in from the view's context dict.
+                The view queries all orders where payment_type is not null (meaning the order has been
+                paid and closed). See bangazonapi/views/report.py for the query.
+
+                Django's template engine loops over the list and renders one <tr> per order.
+                Each double-bracketed expression is replaced with real data from the Order object and its
+                related models: order.customer.user gives us the Django User linked to the Customer,
+                and order.payment_type gives us the Payment record used to close the order.
+            -->
+            {% for order in completed_orders %}
+            <tr>
+                <td>{{ order.id }}</td>
+                <td>{{ order.customer.user.first_name }} {{ order.customer.user.last_name }}</td>
+                <td>{{ order.total }}</td>
+                <td>{{ order.payment_type.merchant_name }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+
+</html>

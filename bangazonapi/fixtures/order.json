@@ -9,15 +9,6 @@
         }
     },
     {
-        "pk": 2,
-        "model": "bangazonapi.order",
-        "fields": {
-            "customer_id": 7,
-            "created_date": "2019-04-12",
-            "payment_type_id": null
-        }
-    },
-    {
         "pk": 3,
         "model": "bangazonapi.order",
         "fields": {
@@ -60,33 +51,6 @@
             "customer_id": 6,
             "created_date": "2019-05-27",
             "payment_type_id": 2
-        }
-    },
-    {
-        "pk": 8,
-        "model": "bangazonapi.order",
-        "fields": {
-            "customer_id": 5,
-            "created_date": "2019-03-14",
-            "payment_type_id": null
-        }
-    },
-    {
-        "pk": 9,
-        "model": "bangazonapi.order",
-        "fields": {
-            "customer_id": 6,
-            "created_date": "2018-12-08",
-            "payment_type_id": null
-        }
-    },
-    {
-        "pk": 10,
-        "model": "bangazonapi.order",
-        "fields": {
-            "customer_id": 4,
-            "created_date": "2018-11-03",
-            "payment_type_id": null
         }
     }
 ]

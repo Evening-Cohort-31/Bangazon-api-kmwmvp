@@ -1,5 +1,5 @@
-<!-- Last updated: 2026-05-04 -->
-<!-- Last change: Initial architecture document (reverse-engineered from starter repo) -->
+<!-- Last updated: 2026-05-23 -->
+<!-- Last change: Introduced Cart and CartProduct models; separated cart from order lifecycle -->
 
 # Bangazon Platform API - Technical Architecture
 
@@ -17,7 +17,7 @@ graph LR
 
 ## Codebase Map
 
-```
+```text
 bangazon/                   Django project config
   settings.py               App registry, DB config, DRF settings, CORS
   urls.py                   Top-level router; registers all viewsets
@@ -28,8 +28,10 @@ bangazonapi/                Main Django app
     customer.py             Customer profile (extends Django's User)
     product.py              Product listing (soft-delete, computed properties)
     productcategory.py      Category taxonomy for products
-    order.py                Customer order (open = no payment_type; closed = has one)
-    orderproduct.py         Join table: one line item linking Order to Product
+    cart.py                 Customer cart (one per customer, created at registration)
+    cartproduct.py          Join table: line items linking Cart to Product
+    order.py                Completed purchase order (always has a payment_type)
+    orderproduct.py         Join table: line items linking Order to Product
     payment.py              Payment type (soft-delete)
     recommendation.py       One customer recommends a product to another
     rating.py               Legacy rating model (may be unused; see Unanswered Questions)
@@ -37,12 +39,12 @@ bangazonapi/                Main Django app
     favorite.py             Customer favorites a seller (another Customer)
   views/                    One file per resource; all exported through __init__.py
     register.py             /register and /login function views (outside DRF)
-    product.py              Products viewset + ProductSerializer
+    product.py              Products viewset + ProductSerializer + LineItemProductSerializer
     productcategory.py      ProductCategories viewset
-    order.py                Orders viewset + OrderSerializer
-    cart.py                 Cart viewset (thin wrapper; see profile.py for full cart logic)
-    profile.py              Profile viewset; also owns /profile/cart and /profile/favoritesellers
-    lineitem.py             LineItems viewset (retrieve + destroy for individual line items)
+    order.py                OrderViewSet + OrderSerializer (checkout and order history)
+    cart.py                 CartViewSet (view, add, remove, and clear cart items)
+    profile.py              Profile viewset; exposes /profile/favoritesellers
+    lineitem.py             LineItems viewset (retrieve + destroy for completed order line items)
     paymenttype.py          Payments viewset
     customer.py             Customers viewset
     user.py                 Users viewset
@@ -64,8 +66,9 @@ seed_data.sh                Drops and rebuilds the database from fixtures
 **Starting the server:** The VS Code debugger (`.vscode/launch.json`) launches `manage.py runserver`. This boots Django and starts accepting requests at `http://localhost:8000`.
 
 **Request lifecycle:**
+
 1. A request arrives at `bangazon/urls.py`.
-2. The DRF router matches the URL to a registered viewset (e.g., `Products`, `Orders`, `Cart`).
+2. The DRF router matches the URL to a registered viewset (e.g., `Products`, `OrderViewSet`, `CartViewSet`).
 3. DRF checks the token in the `Authorization` header against `rest_framework.authtoken`.
 4. The viewset method runs, queries the DB through the ORM, serializes the result, and returns a `Response`.
 
@@ -74,29 +77,36 @@ seed_data.sh                Drops and rebuilds the database from fixtures
 ## Component Breakdown
 
 ### Auth (`register.py`)
-Handles registration and login. Registration creates a `User`, a linked `Customer`, and a `Token` in one step. Login returns the token and user ID. All other endpoints expect `Authorization: Token <key>` in the header.
+
+Handles registration and login. Registration creates a `User`, a linked `Customer`, a `Token`, and a `Cart` in one atomic transaction. Login returns the token and user ID. All other endpoints expect `Authorization: Token <key>` in the header.
 
 ### Products (`views/product.py`)
-Full CRUD plus a custom `recommend` action (`POST /products/:id/recommend`). The `list` action supports query string filters: `category`, `quantity`, `order_by`, `direction`, `number_sold`. The `ProductSerializer` includes two computed properties from the model: `number_sold` and `average_rating`.
+
+Full CRUD plus a custom `recommend` action (`POST /products/:id/recommend`). The `list` action supports query string filters: `category`, `quantity`, `order_by`, `direction`, `number_sold`. The `ProductSerializer` includes two computed properties from the model: `number_sold` and `average_rating`. A `LineItemProductSerializer` is also defined here for use in cart and order line item responses; it returns a minimal product representation (`id`, `name`, `price`, `description`, `is_liked`).
 
 ### Orders (`views/order.py`)
-Handles listing a user's orders and updating an order with a payment type (which marks it complete). The open/closed distinction is entirely based on whether `payment_type` is null.
 
-### Cart (`views/cart.py` and `views/profile.py`)
-Cart logic is split across two viewsets. `Cart` handles add (`POST /cart`) and remove (`DELETE /cart/:id`). `Profile` handles get cart (`GET /profile/cart`), delete all items (`DELETE /profile/cart`), and add item (`POST /profile/cart`). Both resolve the current user's open order the same way: `Order.objects.get(customer=current_user, payment_type=None)`.
+Handles listing a user's completed orders and creating a new order at checkout. `POST /orders` is the checkout endpoint: it looks up the customer's `Cart`, creates an `Order` with the provided payment type, converts each `CartProduct` into an `OrderProduct` on the new order, then deletes the cart items and the `Cart`. `GET /orders` returns only completed orders (all `Order` records have a `payment_type`). `GET /orders/:id` retrieves a single order with its line items, total, and size.
+
+### Cart (`views/cart.py`)
+
+All cart logic lives in `CartViewSet`. A `Cart` record is created at registration and exists permanently for each customer. Cart items are `CartProduct` records. `GET /cart` returns the cart with nested line items, total, and size, creating the cart record if it does not yet exist. `POST /cart` adds a product to the cart. `DELETE /cart/:id` removes a single `CartProduct` by its pk. `DELETE /cart/delete_all` removes all `CartProduct` records for the cart without deleting the `Cart` itself.
 
 ### Payment Types (`views/paymenttype.py`)
+
 CRUD for payment methods. The `list` action currently returns all payment types (bug: should filter to the authenticated user's only).
 
 ### Profile (`views/profile.py`)
+
 Returns user profile data including payment types and received recommendations. Also exposes `/profile/favoritesellers`.
 
 ### Line Items (`views/lineitem.py`)
-Handles `GET /lineitems/:id` and `DELETE /lineitems/:id` for individual line items.
+
+Handles `GET /lineitems/:id` and `DELETE /lineitems/:id` for individual `OrderProduct` records on completed orders. Cart item deletion is handled separately by `CartViewSet.destroy` at `DELETE /cart/:id`.
 
 ## Data Model
 
-An order is "open" (the cart) when `payment_type` is null. Assigning a payment type closes the order.
+A `Cart` is created for each customer at registration and persists permanently. `CartProduct` records are the items in the cart. An `Order` is only created at checkout and always has a `payment_type`. `OrderProduct` records link completed orders to the products that were purchased.
 
 ```mermaid
 erDiagram
@@ -120,7 +130,6 @@ erDiagram
     Product {
         int id PK
         int customer_id FK
-        int category_id FK
         string name
         float price
         string description
@@ -129,6 +138,15 @@ erDiagram
         string location
         string image_path
         date deleted
+    }
+    Cart {
+        int id PK
+        int customer_id FK
+    }
+    CartProduct {
+        int id PK
+        int cart_id FK
+        int product_id FK
     }
     Order {
         int id PK
@@ -169,6 +187,7 @@ erDiagram
     }
 
     User ||--|| Customer : "has profile"
+    Customer ||--|| Cart : "has cart"
     Customer ||--o{ Product : "sells"
     Customer ||--o{ Order : "places"
     Customer ||--o{ Payment : "owns"
@@ -178,16 +197,18 @@ erDiagram
     Customer ||--o{ Favorite : "favorites sellers"
     Customer ||--o{ Favorite : "is favorited as seller"
     ProductCategory ||--o{ Product : "categorizes"
+    Cart ||--o{ CartProduct : "contains"
+    Product ||--o{ CartProduct : "held in carts via"
     Product ||--o{ OrderProduct : "appears in orders via"
     Product ||--o{ ProductRating : "receives"
     Product ||--o{ Recommendation : "is subject of"
     Order ||--o{ OrderProduct : "contains"
-    Payment |o--o{ Order : "completes"
+    Payment ||--o{ Order : "completes"
 ```
 
 **Notes on the data model:**
 - `Product` and `Payment` use `django-safedelete` with `SOFT_DELETE` policy. Deleted records stay in the database with a `deleted` timestamp instead of being removed.
-- An `Order` with `payment_type = null` is the user's active cart. There should only ever be one per customer at a time.
+- `Cart` and `Order` are now distinct concepts. A `Cart` holds items being considered; an `Order` is a completed purchase. At checkout, `CartProduct` records are converted to `OrderProduct` records on the new `Order`, then the cart items are deleted.
 - `Favorite.seller` is a FK to `Customer`, not to a dedicated Store model. A Store model does not currently exist (see Unanswered Questions).
 
 ## API Design
@@ -195,22 +216,24 @@ erDiagram
 All endpoints use JSON. Token authentication is required except for `/register` and `/login`.
 
 | Method | URL | Description |
-|--------|-----|-------------|
+| ------ | --- | ----------- |
 | POST | /register | Create account, returns token |
 | POST | /login | Authenticate, returns token |
 | GET/POST | /products | List or create products |
 | GET/PUT/DELETE | /products/:id | Retrieve, update, or delete a product |
 | POST | /products/:id/recommend | Recommend product to another user |
 | GET/POST | /productcategories | List or create categories |
-| GET/PUT | /orders/:id | Retrieve or complete an order (assign payment) |
-| GET | /orders | List authenticated user's orders |
-| GET/POST/DELETE | /cart | View cart, add item, or delete all items |
-| DELETE | /cart/:id | Remove a single line item by product id |
-| GET/DELETE | /lineitems/:id | Retrieve or remove a specific line item |
+| GET | /orders | List authenticated user's completed orders |
+| GET | /orders/:id | Retrieve a single completed order with line items |
+| POST | /orders | Checkout: create order from cart, clears cart |
+| GET | /cart | View cart with line items, total, and size |
+| POST | /cart | Add a product to the cart |
+| DELETE | /cart/:id | Remove a single cart item by CartProduct id |
+| DELETE | /cart/delete_all | Remove all items from the cart |
+| GET/DELETE | /lineitems/:id | Retrieve or remove a completed order line item |
 | GET/POST | /paymenttypes | List or create payment types |
 | DELETE | /paymenttypes/:id | Delete a payment type |
 | GET | /profile | Get authenticated user's profile |
-| GET/POST/DELETE | /profile/cart | Cart management (mirrors /cart) |
 | GET | /profile/favoritesellers | List favorited sellers |
 
 **Planned but not yet implemented:** `/products/:id/like`, `/products/liked`, `/profile/favoritesellers` (POST), `/stores`, `/reports/*`
@@ -228,7 +251,8 @@ This is a local development project. There is no staging or production environme
 
 - **DRF `ViewSet` over `ModelViewSet`:** All viewsets inherit from `ViewSet` and implement only the actions they need, rather than using `ModelViewSet` which would auto-generate all CRUD actions. This gives explicit control over what each endpoint does.
 - **Token auth with `AllowAny` as default:** The global DRF permission is `AllowAny`. Individual viewsets override this with `IsAuthenticatedOrReadOnly` where needed. This means forgetting to set permissions on a new viewset leaves it open, which is worth watching.
-- **Open/closed order via null payment type:** Rather than an explicit status field on `Order`, the convention is that `payment_type = null` means the order is a cart. This is a simple approach but requires every query involving open orders to remember to filter by `payment_type__isnull=True`.
+- **Separate `Cart` and `Order` models:** A `Cart` is a permanent per-customer record that holds items under consideration. An `Order` is only created at checkout and always has a payment type. This replaces the previous convention of using `payment_type=null` on `Order` to represent an open cart, which caused `GET /orders` to include in-progress carts alongside completed purchases.
+- **Two join tables (`CartProduct` and `OrderProduct`):** Rather than a single `OrderProduct` table that switches between pointing to a `Cart` or an `Order`, two separate tables make the data model explicit. `CartProduct` links `Cart` to `Product`; `OrderProduct` links `Order` to `Product`. At checkout, cart items are copied into order items and then deleted.
 - **Soft delete for products and payments:** Using `django-safedelete` instead of hard deletes lets records persist for order history.
 
 ## Project Conventions
@@ -246,9 +270,10 @@ New tests should follow this same pattern: create what you need through the API 
 ### Code Style
 
 - One model per file in `models/`, one viewset per file in `views/`
-- Serializers are defined in the same file as the viewset that uses them
+- Serializers are defined in the same file as the viewset that uses them; serializers shared across multiple viewsets live in the view file most closely associated with their model
 - Query string parameters are read from `self.request.query_params.get(...)` inside `list` actions
 - Custom actions on a viewset use the `@action` decorator from `rest_framework.decorators`
+- View files use relative imports (`from .product import ProductSerializer`) rather than absolute package imports to avoid circular import errors
 
 ### Commits and PRs
 
