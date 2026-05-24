@@ -1,3 +1,4 @@
+""" View module for handling requests about Stores """
 
 from rest_framework import (
     serializers,
@@ -24,8 +25,9 @@ class StoreSerializer(serializers.ModelSerializer):
           model = Store
           fields = ["id", "name", "description", "seller"]
 
-class Stores(viewsets.ViewSet):
-    """Request handlers for Products in the Bangazon Platform"""
+class StoreViewSet(viewsets.ViewSet):
+    """Request handlers for Stores in the Bangazon Platform"""
+
     permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
 
     def create(self, request):
@@ -35,7 +37,7 @@ class Stores(viewsets.ViewSet):
         if hasattr(customer, 'store'): 
              # customer.store() raises an error if no store exists with a OneToOneField, so hasattr is safer than accessing customer.store directly to check if one exists
             return response.Response(
-                {"message": "You already have a store."}, status=status.HTTP_400_BAD_REQUEST
+                {"message": "You already have a store."}, status=status.HTTP_409_CONFLICT
                 )
         
         new_store = Store()
