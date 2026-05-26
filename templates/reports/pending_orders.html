@@ -1,8 +1,6 @@
 <!DOCTYPE html>
 <!--
-    This page is rendered directly by Django on the server and returned as plain HTML.
-    It does not require the Next.js frontend client. You can visit it directly in the
-    browser at http://localhost:8000/reports/completed_orders while the Django dev server is running.
+    This page can be viewed on the browser at http://localhost:8000/reports/pending_orders while the Django dev server is running. Same formatting as completed_orders is used.
 -->
 <html lang="en">
 
@@ -56,7 +54,7 @@
         </thead>
         <tbody>
             <!--
-                "pending_orders" is the list of Cart objects passed in from the view's context dict.
+                "pending_orders" uses the list of Cart objects passed in from the Cart view rather than filtering Orders based on payment type
             -->
             {% for cart in pending_orders %}
             <tr>

@@ -26,8 +26,10 @@ def completed_orders_report(request):
     # Render the 'completed_orders.html' template with the context data
     return render(request, "reports/completed_orders.html", context)
 
-def incomplete_orders_report(request):
-    """View function to generate a report of incomplete orders"""
+def pending_orders_report(request):
+    """View function to generate a report of incomplete orders now called pending orders"""
+
+    # Follows the same pattern as  completed_orders_report only queries the Cart model as reference instead of Orders.
     pending_orders = (
         Cart.objects.filter()
         .prefetch_related("lineitems__product")
@@ -35,8 +37,8 @@ def incomplete_orders_report(request):
         .all()
     )
 
-    # Prepare the context for the template. This allows you to access the completed_orders data in the HTML template
+
     context = {"pending_orders": pending_orders}
 
-    # Render the 'completed_orders.html' template with the context data
+    # Renders as 'pending_orders.html' template using the context data
     return render(request, "reports/pending_orders.html", context)
