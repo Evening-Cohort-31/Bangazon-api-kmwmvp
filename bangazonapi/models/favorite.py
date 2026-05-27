@@ -1,4 +1,4 @@
-"""Model for Favorite in Bangazon API"""
+"""Model for Favorites in Bangazon API"""
 
 from django.db import models
 from .customer import Customer
