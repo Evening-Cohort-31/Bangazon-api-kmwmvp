@@ -21,6 +21,13 @@ class CustomerSerializer(serializers.HyperlinkedModelSerializer):
 
 class Customers(ViewSet):
 
+    def list(self, request):
+        customers = Customer.objects.all()
+        serializer = CustomerSerializer(
+            customers, many=True,
+            context={'request': request})
+        return Response(serializer.data)
+
     def update(self, request, pk=None):
         """
         @api {PUT} /customers/:id PUT changes to customer profile

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<!--
+    This page can be viewed on the browser at http://localhost:8000/reports/pending_orders while the Django dev server is running. Same formatting as completed_orders is used.
+-->
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Pending Orders Report</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 2rem;
+            background-color: #f4f6f9;
+            color: #293241;
+        }
+
+        h1 {
+            color: #3d5a80;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        th {
+            background-color: #3d5a80;
+            color: #ffffff;
+            padding: 0.6rem 1rem;
+            text-align: left;
+        }
+
+        td {
+            padding: 0.6rem 1rem;
+            border-bottom: 1px solid #98c1d9;
+        }
+
+        tr:hover td {
+            background-color: #e8f0f7;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Pending Orders Report</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Cart ID</th>
+                <th>Customer</th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!--
+                "pending_orders" uses the list of Cart objects passed in from the Cart view rather than filtering Orders based on payment type
+            -->
+            {% for cart in pending_orders %}
+            <tr>
+                <td>{{ cart.id }}</td>
+                <td>{{ cart.customer.user.first_name }} {{ cart.customer.user.last_name }}</td>
+                <td>{{ cart.total }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+
+</html>
