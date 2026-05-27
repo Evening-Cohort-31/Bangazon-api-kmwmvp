@@ -26,7 +26,8 @@ class ProductCategories(viewsets.ViewSet):
         """
         new_product_category = ProductCategory()
         new_product_category.name = request.data["name"]
-        new_product_category.description = request.data["description"]
+        if "description" in request.data: 
+            new_product_category.description = request.data["description"]        
         if "parent_category" in request.data:
             new_product_category.parent_category_id = request.data["parent_category"]
         new_product_category.save()

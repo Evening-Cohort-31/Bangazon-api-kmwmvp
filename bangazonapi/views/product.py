@@ -28,6 +28,7 @@ class ProductSerializer(serializers.ModelSerializer):
 
     categories = CategorySummarySerializer(many=True, read_only=True)
     is_liked = serializers.SerializerMethodField()
+    price = serializers.DecimalField(max_digits=10, decimal_places=2)
 
     def get_is_liked(self, obj):
         request = self.context.get("request")
