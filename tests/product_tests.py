@@ -65,7 +65,7 @@ class ProductTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(json_response["name"], "Kite")
-        self.assertEqual(json_response["price"], ""14.99"")
+        self.assertEqual(json_response["price"], "14.99")
         self.assertEqual(json_response["quantity"], 60)
         self.assertEqual(json_response["description"], "It flies high")
         self.assertEqual(json_response["location"], "Pittsburgh")
@@ -127,7 +127,7 @@ class ProductTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
-        #GET the product again to verify the 404 response
+        # GET the product again to verify the 404 response
         response = self.client.get(f"/products/{productId}")
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
