@@ -1,10 +1,7 @@
-from django.core.validators import MaxValueValidator, MinValueValidator
+"""Model for Favorites in Bangazon API"""
+
 from django.db import models
 from .customer import Customer
-from .category import ProductCategory
-from .orderproduct import OrderProduct
-from safedelete.models import SafeDeleteModel
-from safedelete.models import SOFT_DELETE
 
 
 class Favorite(models.Model):
