@@ -283,9 +283,7 @@ class ProductViewSet(viewsets.ViewSet):
         if "category_ids" in request.data:
             product.categories.set(request.data["category_ids"])
 
-        serialized = ProductSerializer(product, context={"request": request})
-
-        return response.Response(serialized.data, status=status.HTTP_200_OK)
+        return response.Response({}, status=status.HTTP_204_NO_CONTENT)
 
     def destroy(self, request, pk=None):
         """
