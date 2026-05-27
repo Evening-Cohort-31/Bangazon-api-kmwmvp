@@ -8,7 +8,7 @@ from rest_framework import (
     response,
 )
 
-from bangazonapi.models import Customer, Store, Favorite, customer, customer
+from bangazonapi.models import Customer, Store, Favorite
 
 
 class SellerSerializer(serializers.ModelSerializer):
@@ -36,11 +36,10 @@ class StoreSerializer(serializers.ModelSerializer):
         if not user.is_authenticated:
             return False
 
-        customer_owning_store = obj.customer
         user_customer_profile = Customer.objects.get(user=user)
 
         return Favorite.objects.filter(
-            customer=user_customer_profile, seller=customer_owning_store
+            customer=user_customer_profile, store=obj
         ).exists()
 
     class Meta:
