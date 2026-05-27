@@ -5,7 +5,7 @@ from rest_framework import routers
 from rest_framework.authtoken.views import obtain_auth_token
 from bangazonapi.models import *
 from bangazonapi.views import *
-from bangazonapi.views.report import completed_orders_report
+from bangazonapi.views.report import completed_orders_report, pending_orders_report
 
 # pylint: disable=invalid-name
 router = routers.DefaultRouter(trailing_slash=False)
@@ -17,8 +17,8 @@ router.register(r"users", Users, "user")
 router.register(r"orders", OrderViewSet, "order")
 router.register(r"cart", CartViewSet, "cart")
 router.register(r"paymenttypes", Payments, "payment")
-router.register(r"profile", Profile, "profile")
-router.register(r"stores", Stores, "store")
+router.register(r"profile", ProfileViewSet, "profile")
+router.register(r"stores", StoreViewSet, "store")
 
 
 # Wire up our API using automatic URL routing.
@@ -34,4 +34,10 @@ urlpatterns = [
         completed_orders_report,
         name="completed_orders",
     ),
+    path(
+        "reports/pending_orders",
+        pending_orders_report,
+        name="pending_orders"
+
+    )
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

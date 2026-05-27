@@ -1,3 +1,5 @@
+""" Model for Store inf Bangazon API """
+
 from django.db import models
 from .customer import Customer
 

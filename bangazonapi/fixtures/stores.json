@@ -1,0 +1,20 @@
+[
+    {
+        "pk": 1,
+        "model": "bangazonapi.store",
+        "fields": {
+            "customer_id": 5,
+            "name": "Joe's Fishing Emporium",
+            "description": "There's no better place to get your fishing gear than Joe's Fishing Emporium! We have everything you need to catch the big one, including rods, reels, bait, and tackle. Our friendly staff is always happy to help you find the perfect equipment for your next fishing trip. Come visit us today and see why we're the best fishing store in town!"
+        }
+    },
+    {
+        "pk": 2,
+        "model": "bangazonapi.store",
+        "fields": {
+            "customer_id": 6,
+            "name": "Jisie David's Computer Repair",
+            "description": "Jisie David's Computer Repair offers top-notch computer repair services. Whether you need hardware upgrades, software troubleshooting, or virus removal, we've got you covered. Our experienced technicians are dedicated to providing fast and reliable service to get your computer back in working order."
+        }
+    }
+]

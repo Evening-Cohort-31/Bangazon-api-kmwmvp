@@ -4,10 +4,10 @@ from .order import OrderViewSet, OrderLineItemSerializer
 from .paymenttype import Payments, PaymentSerializer
 from .product import ProductViewSet, ProductSerializer
 from .cart import CartViewSet
-from .profile import Profile
+from .profile import ProfileViewSet
 from .category import ProductCategories
 from .lineitem import LineItems
 from .customer import Customers
 from .user import Users
-from .store import Stores
+from .store import StoreViewSet
 from .report import completed_orders_report
