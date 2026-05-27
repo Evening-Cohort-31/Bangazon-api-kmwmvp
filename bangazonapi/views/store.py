@@ -1,3 +1,5 @@
+"""View module for handling requests about Stores"""
+
 from rest_framework import (
     serializers,
     status,
@@ -46,8 +48,8 @@ class StoreSerializer(serializers.ModelSerializer):
         fields = ["id", "name", "description", "seller", "is_favorite"]
 
 
-class Stores(viewsets.ViewSet):
-    """Request handlers for Products in the Bangazon Platform"""
+class StoreViewSet(viewsets.ViewSet):
+    """Request handlers for Stores in the Bangazon Platform"""
 
     # Allow any user to GET, but only allow authenticated users to POST
     permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
@@ -60,7 +62,7 @@ class Stores(viewsets.ViewSet):
             # customer.store() raises an error if no store exists with a OneToOneField, so hasattr is safer than accessing customer.store directly to check if one exists
             return response.Response(
                 {"message": "You already have a store."},
-                status=status.HTTP_400_BAD_REQUEST,
+                status=status.HTTP_409_CONFLICT,
             )
 
         new_store = Store()

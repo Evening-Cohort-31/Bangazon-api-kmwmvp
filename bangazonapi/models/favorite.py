@@ -2,6 +2,7 @@
 
 from django.db import models
 from .customer import Customer
+from .store import Store
 
 
 class Favorite(models.Model):
@@ -9,7 +10,8 @@ class Favorite(models.Model):
     customer = models.ForeignKey(
         Customer,
         on_delete=models.DO_NOTHING,
+        related_name="favorites",
     )
-    seller = models.ForeignKey(
-        Customer, on_delete=models.DO_NOTHING, related_name="favorited_seller"
+    store = models.ForeignKey(
+        Store, on_delete=models.DO_NOTHING, related_name="favorited_stores"
     )

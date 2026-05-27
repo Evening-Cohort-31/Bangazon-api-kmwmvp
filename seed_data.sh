@@ -7,6 +7,7 @@ python manage.py migrate
 python manage.py loaddata users
 python manage.py loaddata tokens
 python manage.py loaddata customers
+python manage.py loaddata stores
 python manage.py loaddata product_category
 python manage.py loaddata product
 python manage.py loaddata productrating
