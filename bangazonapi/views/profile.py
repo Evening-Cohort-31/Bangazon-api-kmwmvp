@@ -3,16 +3,22 @@
 from django.http import HttpResponseServerError
 from django.contrib.auth.models import User
 from rest_framework import serializers, status
-from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
-from bangazonapi.models import Customer, Product, OrderProduct, Recommendation, Favorite, Store
+from bangazonapi.models import (
+    Customer,
+    Product,
+    OrderProduct,
+    Recommendation,
+    Favorite,
+    Store,
+)
 from .product import ProductSerializer
 
 
 class ProfileViewSet(ViewSet):
-    """ Request handlers for user profile info in the Bangazon Platform """
+    """Request handlers for user profile info in the Bangazon Platform"""
 
     permission_classes = (IsAuthenticatedOrReadOnly,)
 
@@ -88,124 +94,9 @@ class ProfileViewSet(ViewSet):
         except Exception as ex:
             return HttpResponseServerError(ex)
 
-    @action(methods=['get', 'post'], detail=False)
-    def favoritestores(self, request):
-        """ Favorite stores endpoint for user profile to view and add favorite stores """
-
-        # Get current user profile
-        customer = Customer.objects.get(user=request.auth.user)
-
-        if request.method == "GET":
-            """
-            @api {GET} /profile/favoritestores GET favorite stores
-            @apiName GetFavoriteStores
-            @apiGroup UserProfile
-
-            @apiHeader {String} Authorization Auth token
-            @apiHeaderExample {String} Authorization
-                Token 9ba45f09651c5b0c404f37a2d2572c026c146611
-
-            @apiSuccess (200) {id} id Favorite id
-            @apiSuccess (200) {Object} store Favorited store
-            @apiSuccess (200) {String} store.name Store name
-            @apiSuccess (200) {String} seller.first_name Store owner's first name
-            @apiSuccess (200) {String} seller.last_name Store owner's last name
-            @apiSuccessExample {json} Success
-                [
-                    {
-                        "id": 1,
-                        "store": {
-                            "name": "Steve's Store",
-                            "seller": {
-                                "first_name": "Steve",
-                                "last_name": "Smith"
-                            },
-                        }
-                    },
-                    {
-                        "id": 2,
-                        "store": {
-                            "name": "Brenda's Store",
-                            "seller": {
-                                "first_name": "Brenda",
-                                "last_name": "Johnson"
-                            },
-                        }
-                    },
-                    {
-                        "id": 3,
-                        "store": {
-                            "name": "Charlie's Store",
-                            "seller": {
-                                "first_name": "Charlie",
-                                "last_name": "Brown"
-                            }
-                        }
-                    }
-                ]
-            """
-            favorites = Favorite.objects.filter(customer=customer)
-
-            serializer = FavoriteStoreSerializer(
-                favorites, many=True, context={"request": request}
-            )
-            return Response(serializer.data)
-
-        if request.method == "POST":
-            """
-            @api {POST} /profile/favoritestores POST new favorite store
-            @apiName AddFavoriteStore
-            @apiGroup UserProfile
-
-            @apiHeader {String} Authorization Auth token
-            @apiHeaderExample {String} Authorization
-                Token 9ba45f09651c5b0c404f37a2d2572c026c146611
-
-            @apiParam {Number} store_id Id of store to favorite
-
-            @apiSuccess (200) {id} id Favorite id
-            @apiSuccess (200) {Object} store Favorited store
-            @apiSuccess (200) {String} store.name Store name
-            @apiSuccess (200) {String} seller.first_name Store owner's first name
-            @apiSuccess (200) {String} seller.last_name Store owner's last name
-            @apiSuccessExample {json} Success
-                {
-                    "id": 4,
-                    "store": {
-                        "name": "Steve's Store",
-                        "seller": {
-                            "first_name": "Steve",
-                            "last_name": "Smith"
-                        }
-                    }
-                }
-            """
-            try:
-                new_favorite = Favorite()
-                new_favorite.customer = customer
-                new_favorite.store = Store.objects.get(pk=request.data["store_id"])
-                
-                if Favorite.objects.filter(customer=customer, store=new_favorite.store).exists():
-                    return Response(
-                        {"message": "This store is already in your favorites list."},
-                        status=status.HTTP_409_CONFLICT,
-                    )
-
-                new_favorite.save()
-
-                serializer = FavoriteStoreSerializer(
-                    new_favorite, many=False, context={"request": request}
-                )
-                return Response(serializer.data)
-
-            except Store.DoesNotExist as ex:
-                return Response(
-                    {"message": ex.args[0]}, status=status.HTTP_404_NOT_FOUND
-                )
-
 
 class LineItemSerializer(serializers.HyperlinkedModelSerializer):
-    """ JSON serializer for products in the user's profile recommends section """
+    """JSON serializer for products in the user's profile recommends section"""
 
     product = ProductSerializer(many=False)
 
@@ -215,7 +106,7 @@ class LineItemSerializer(serializers.HyperlinkedModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    """ JSON serializer for customer profile """
+    """JSON serializer for customer profile"""
 
     class Meta:
         model = User
@@ -223,7 +114,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class CustomerSerializer(serializers.ModelSerializer):
-    """ JSON serializer for recommendation customers """
+    """JSON serializer for recommendation customers"""
 
     user = UserSerializer()
 
@@ -236,7 +127,7 @@ class CustomerSerializer(serializers.ModelSerializer):
 
 
 class ProfileProductSerializer(serializers.ModelSerializer):
-    """ JSON serializer for products liked by the user in their profile """
+    """JSON serializer for products liked by the user in their profile"""
 
     class Meta:
         model = Product
@@ -247,7 +138,7 @@ class ProfileProductSerializer(serializers.ModelSerializer):
 
 
 class RecommenderSerializer(serializers.ModelSerializer):
-    """ JSON serializer for recommendations """
+    """JSON serializer for recommendations"""
 
     customer = CustomerSerializer()
     product = ProfileProductSerializer()
@@ -259,27 +150,30 @@ class RecommenderSerializer(serializers.ModelSerializer):
             "customer",
         )
 
-class SellerSerializer(serializers.ModelSerializer):
-    """ JSON serializer for SELLER (store owner) """
 
-    first_name = serializers.CharField(source='user.first_name')
-    last_name = serializers.CharField(source='user.last_name')
+class SellerSerializer(serializers.ModelSerializer):
+    """JSON serializer for SELLER (store owner)"""
+
+    first_name = serializers.CharField(source="user.first_name")
+    last_name = serializers.CharField(source="user.last_name")
 
     class Meta:
         model = Customer
         fields = ["first_name", "last_name"]
 
+
 class StoreSerializer(serializers.ModelSerializer):
-     """ JSON serializer for store dropping description """
+    """JSON serializer for store dropping description"""
 
-     seller = SellerSerializer(source="customer", many=False)
+    seller = SellerSerializer(source="customer", many=False)
 
-     class Meta:
-          model = Store
-          fields = ["id", "name", "seller"]
+    class Meta:
+        model = Store
+        fields = ["id", "name", "seller"]
+
 
 class FavoriteStoreSerializer(serializers.ModelSerializer):
-    """ Serializer for Favorites to only expose id and nested seller info since customer_id is implied by the endpoint """
+    """Serializer for Favorites to only expose id and nested seller info since customer_id is implied by the endpoint"""
 
     store = StoreSerializer(many=False)
 
@@ -287,8 +181,9 @@ class FavoriteStoreSerializer(serializers.ModelSerializer):
         model = Favorite
         fields = ("id", "store")
 
+
 class ProfileSerializer(serializers.ModelSerializer):
-    """ JSON serializer for customer profile """
+    """JSON serializer for customer profile"""
 
     user = UserSerializer(many=False)
     recommends = RecommenderSerializer(many=True)
@@ -298,7 +193,17 @@ class ProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Customer
-        fields = ('id', 'user', 'phone_number', 'address', 'payment_types', 'recommends', 'store', 'likes', 'favorite_stores')
+        fields = (
+            "id",
+            "user",
+            "phone_number",
+            "address",
+            "payment_types",
+            "recommends",
+            "store",
+            "likes",
+            "favorite_stores",
+        )
 
         # use depth=1 to automatically serialize nested payment types since there is no custom serializer for them
         depth = 1

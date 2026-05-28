@@ -19,7 +19,7 @@ router.register(r"cart", CartViewSet, "cart")
 router.register(r"paymenttypes", Payments, "payment")
 router.register(r"profile", ProfileViewSet, "profile")
 router.register(r"stores", StoreViewSet, "store")
-
+router.register(r"favorites", FavoriteViewSet, "favorite")
 
 # Wire up our API using automatic URL routing.
 # Additionally, we include login URLs for the browsable API.
@@ -34,10 +34,5 @@ urlpatterns = [
         completed_orders_report,
         name="completed_orders",
     ),
-    path(
-        "reports/pending_orders",
-        pending_orders_report,
-        name="pending_orders"
-
-    )
+    path("reports/pending_orders", pending_orders_report, name="pending_orders"),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

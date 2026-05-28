@@ -1,22 +1,11 @@
 """View Module for Handling Requests about Customer Favorites"""
 
-import datetime
-from PIL.Image import item
-from django.http import HttpResponseServerError
+from django.contrib.auth.models import User
 from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
 from rest_framework import serializers, status
-from bangazonapi.models import Order, Payment, Customer, OrderProduct, Cart, CartProduct
-from .product import LineItemProductSerializer
-from .paymenttype import PaymentSerializer
-
-
-class StoreSerializer(serializers.ModelSerializer):
-    """JSON serializer for STORE SERIALIZER summary"""
-
-    class Meta:
-        model = Store
-        fields = ["id", "name", "description"]
+from bangazonapi.models import Customer, Favorite, Store
+from .store import StoreSerializer
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -47,10 +36,24 @@ class FavoriteSerializer(serializers.ModelSerializer):
     customer = CustomerSerializer()
 
     class Meta:
-        model = Order
+        model = Favorite
         fields = (
             "id",
             "customer",
+            "store",
+        )
+
+
+class ListFavoriteSerializer(serializers.ModelSerializer):
+    """JSON serializer for listing customer favorites"""
+
+    store = StoreSerializer()
+    # omits customer details for list view since it's the same for all favorites in the list
+
+    class Meta:
+        model = Favorite
+        fields = (
+            "id",
             "store",
         )
 
@@ -69,153 +72,185 @@ class FavoriteViewSet(ViewSet):
             Token 9ba45f09651c5b0c404f37a2d2572c026c146611
 
         @apiSuccess (200) {id} id Favorite id
-        @apiSuccess (200) {String} customer Customer URI
+        @apiSuccess (200) {Object} customer Customer object
+        @apiSuccess (200) {Object} store Store object
 
         @apiSuccessExample {json} Success
             {
                 "id": 1,
-                "created_date": "2019-08-16",
-                "payment_type": 1,
-                "customer": "Steve Rogers",
-                "lineitems": [
-                    {
-                        "id": 1,
-                        "product": {
-                            "name": "900",
-                            "price": 1296.98,
-                            "number_sold": 0,
-                            "description": "1987 Saab",
-                            "quantity": 2,
-                            "created_date": "2019-03-19",
-                            "location": "Vratsa",
-                            "image_path": null,
-                            "average_rating": 0,
-                            "category": {
-                                    "name": "Auto"
-                                },
+                "customer": {
+                    "id": 1,
+                    "user": {
+                        "first_name": "Steve",
+                        "last_name": "Rogers",
+                        "email": "steve.rogers@example.com"
                             }
-                        ],
-                "total": 1296.98,
-                "size": 1
-                    }
+                        },
+                "store": {
+                    "id": 1,
+                    "name": "Rogers' Used Cars",
+                    "description": "A variety of used cars for sale",
+                    "seller": {
+                        "first_name": "Steve",
+                        "last_name": "Rogers"
+                                }
+                        }
+            }
         """
         try:
             customer = Customer.objects.get(user=request.auth.user)
-            order = Order.objects.get(pk=pk, customer=customer)
-            serializer = OrderSerializer(order, context={"request": request})
+            favorite = Favorite.objects.get(pk=pk, customer=customer)
+            serializer = FavoriteSerializer(favorite, context={"request": request})
             return Response(serializer.data)
 
-        except Order.DoesNotExist as ex:
+        except (Favorite.DoesNotExist, Customer.DoesNotExist):
             return Response(
                 {
-                    "message": "The requested order does not exist, or you do not have permission to access it."
+                    "message": "The requested favorite does not exist, or you do not have permission to access it."
                 },
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        except Exception as ex:
-            return HttpResponseServerError(ex)
-
     def create(self, request, pk=None):
         """
-        @api {PUT} /orders/:id PUT new payment for order
-        @apiName AddPayment
-        @apiGroup Orders
+        @api {PUT} /favorites/:id PUT new favorite for customer
+        @apiName AddFavorite
+        @apiGroup Favorites
 
         @apiHeader {String} Authorization Auth token
         @apiHeaderExample {String} Authorization
             Token 9ba45f09651c5b0c404f37a2d2572c026c146611
 
-        @apiParam {id} id Order Id route parameter
-        @apiParam {id} payment_type Payment Id to pay for the order
+        @apiParam {id} id Favorite Id route parameter
+        @apiParam {id} store_id Store Id to add to favorites
         @apiParamExample {json} Input
             {
-                "payment_type": 6
+                "store_id": 6
             }
 
         @apiSuccessExample {json} Success
             HTTP/1.1 204 No Content
         """
-        customer = Customer.objects.get(user=request.auth.user)
-        # Handle case where cart is empty and order is created without line items
-        try:
-            customer_cart = Cart.objects.get(customer=customer)
-            payment = Payment.objects.get(pk=request.data["payment_type"])
-            created_date = datetime.datetime.now()
 
-            customer_order = Order.objects.create(
-                customer=customer, payment_type=payment, created_date=created_date
+        try:
+            customer = Customer.objects.get(user=request.auth.user)
+            store = Store.objects.get(pk=request.data["store_id"])
+            if Favorite.objects.filter(customer=customer, store=store).exists():
+                return Response(
+                    {"message": "This store is already in your favorites."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            favorite = Favorite()
+            favorite.customer = customer
+            favorite.store = store
+            favorite.save()
+            return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+        except Customer.DoesNotExist:
+            return Response(
+                {"message": "You do not have permission to add favorites."},
+                status=status.HTTP_404_NOT_FOUND,
             )
 
-            for item in CartProduct.objects.filter(cart=customer_cart):
-                OrderProduct.objects.create(order=customer_order, product=item.product)
-
-            CartProduct.objects.filter(cart=customer_cart).delete()
-
-            customer_cart.delete()
-
-            return Response({}, status=status.HTTP_204_NO_CONTENT)
-        except Cart.DoesNotExist:
+        except Store.DoesNotExist:
             return Response(
-                {"message": "The cart is empty."},
+                {"message": "The requested store does not exist."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        except KeyError:
+            return Response(
+                {"message": "a store_id is required."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
     def list(self, request):
         """
-        @api {GET} /orders GET customer orders
-        @apiName GetOrders
-        @apiGroup Orders
+        @api {GET} /favorites GET customer favorites
+        @apiName GetFavorites
+        @apiGroup Favorites
 
         @apiHeader {String} Authorization Auth token
         @apiHeaderExample {String} Authorization
             Token 9ba45f09651c5b0c404f37a2d2572c026c146611
 
-        @apiParam {id} payment_id Query param to filter by payment used
+        @apiParam {id} store_id Query param to filter by store id
 
-        @apiSuccess (200) {Object[]} orders Array of order objects
-        @apiSuccess (200) {id} orders.id Order id
-        @apiSuccess (200) {String} orders.created_date Date order was created
-        @apiSuccess (200) {String} orders.payment_type Payment URI
-        @apiSuccess (200) {String} orders.customer Customer URI
+        @apiSuccess (200) {Object[]} favorites Array of favorite objects
+        @apiSuccess (200) {id} favorites.id Favorite id
+        @apiSuccess (200) {Object} favorites.created_date Date favorite was created
+        @apiSuccess (200) {Object} favorites.store Store URI
+        @apiSuccess (200) {Object} favorites.customer Customer URI
 
         @apiSuccessExample {json} Success
             [
                 {
                     "id": 1,
-                    "created_date": "2019-08-16",
-                    "payment_type": 1,
-                    "customer": "Steve Rogers",
-                    "lineitems": [
-                        {
-                            "id": 52,
-                            "product": {
-                                "name": "900",
-                                "price": 1296.98,
-                                "number_sold": 0,
-                                "description": "1987 Saab",
-                                "quantity": 2,
-                                "created_date": "2019-03-19",
-                                "location": "Vratsa",
-                                "image_path": null,
-                                "average_rating": 0,
-                                "category": {
-                                    "url": "http://localhost:8000/productcategories/2",
-                                    "name": "Auto"
-                                }
-                            }
+                    "store": {
+                        "id": 1,
+                        "name": "Rogers' Used Cars",
+                        "description": "A variety of used cars for sale",
+                        "seller": {
+                            "first_name": "Steve",
+                            "last_name": "Rogers"
                         }
-                    ]
+                    },
+                    "customer": {
+                        "id": 1,
+                        "user": {
+                            "first_name": "Steve",
+                            "last_name": "Rogers",
+                            "email": "steve.rogers@example.com"
+                        }
+                    }
                 }
             ]
         """
-        customer = Customer.objects.get(user=request.auth.user)
-        orders = Order.objects.filter(customer=customer, payment_type__isnull=False)
+        try:
+            customer = Customer.objects.get(user=request.auth.user)
+            favorites = Favorite.objects.filter(customer=customer)
 
-        payment = request.query_params.get("payment_id", None)
-        if payment is not None:
-            orders = orders.filter(payment_type__id=payment)
+            store = request.query_params.get("store_id", None)
+            if store is not None:
+                favorites = favorites.filter(store__id=store)
 
-        json_orders = OrderSerializer(orders, many=True, context={"request": request})
+            json_favorites = ListFavoriteSerializer(
+                favorites, many=True, context={"request": request}
+            )
 
-        return Response(json_orders.data)
+            return Response(json_favorites.data)
+
+        except Customer.DoesNotExist:
+            return Response(
+                {"message": "You do not have permission to access these favorites."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+    def destroy(self, request, pk=None):
+        """
+        @api {DELETE} /favorites/:id DELETE favorite
+        @apiName DeleteFavorite
+        @apiGroup Favorites
+
+        @apiHeader {String} Authorization Auth token
+        @apiHeaderExample {String} Authorization
+            Token 9ba45f09651c5b0c404f37a2d2572c026c146611
+
+        @apiParam {id} id Favorite Id route parameter
+
+        @apiSuccessExample {json} Success
+            HTTP/1.1 204 No Content
+        """
+        try:
+            customer = Customer.objects.get(user=request.auth.user)
+            favorite = Favorite.objects.get(pk=pk, customer=customer)
+            favorite.delete()
+            return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+        except (Favorite.DoesNotExist, Customer.DoesNotExist):
+            return Response(
+                {
+                    "message": "The requested favorite does not exist, or you do not have permission to delete it."
+                },
+                status=status.HTTP_404_NOT_FOUND,
+            )
