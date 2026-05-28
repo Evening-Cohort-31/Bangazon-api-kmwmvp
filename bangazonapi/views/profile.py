@@ -3,7 +3,7 @@
 from django.http import HttpResponseServerError
 from django.contrib.auth.models import User
 from rest_framework import serializers, status
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 from bangazonapi.models import (

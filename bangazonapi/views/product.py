@@ -28,6 +28,7 @@ class ProductSerializer(serializers.ModelSerializer):
 
     categories = CategorySummarySerializer(many=True, read_only=True)
     is_liked = serializers.SerializerMethodField()
+    price = serializers.DecimalField(max_digits=10, decimal_places=2)
 
     def get_is_liked(self, obj):
         request = self.context.get("request")
@@ -285,7 +286,7 @@ class ProductViewSet(viewsets.ViewSet):
 
         serialized = ProductSerializer(product, context={"request": request})
 
-        return response.Response(serialized.data, status=status.HTTP_200_OK)
+        return response.Response(serialized.data, status=status.HTTP_204_NO_CONTENT)
 
     def destroy(self, request, pk=None):
         """

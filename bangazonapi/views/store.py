@@ -1,5 +1,7 @@
 """View module for handling requests about Stores"""
 
+"""View module for handling requests about Stores"""
+
 from rest_framework import (
     serializers,
     status,
@@ -8,7 +10,7 @@ from rest_framework import (
     response,
 )
 
-from bangazonapi.models import Customer, Store
+from bangazonapi.models import Customer, Store, Favorite
 
 
 class SellerSerializer(serializers.ModelSerializer):
@@ -27,18 +29,34 @@ class StoreSerializer(serializers.ModelSerializer):
 
     seller = SellerSerializer(source="customer", read_only=True)
 
+    is_favorite = serializers.SerializerMethodField()
+
+    def get_is_favorite(self, obj):
+        """Method to determine if the store is a favorite of the current user"""
+
+        user = self.context["request"].user
+        if not user.is_authenticated:
+            return False
+
+        user_customer_profile = Customer.objects.get(user=user)
+
+        return Favorite.objects.filter(
+            customer=user_customer_profile, store=obj
+        ).exists()
+
     class Meta:
         model = Store
-        fields = ["id", "name", "description", "seller"]
+        fields = ["id", "name", "description", "seller", "is_favorite"]
 
 
 class StoreViewSet(viewsets.ViewSet):
     """Request handlers for Stores in the Bangazon Platform"""
 
+    # Allow any user to GET, but only allow authenticated users to POST
     permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
 
     def create(self, request):
-
+        """Handle POST operations for a Store"""
         customer = Customer.objects.get(user=request.auth.user)
 
         if hasattr(customer, "store"):
