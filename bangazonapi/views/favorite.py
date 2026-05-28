@@ -5,7 +5,6 @@ from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
 from rest_framework import serializers, status
 from bangazonapi.models import Customer, Favorite, Store
-from .store import StoreSerializer
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -29,10 +28,31 @@ class CustomerSerializer(serializers.ModelSerializer):
         )
 
 
+class SellerSerializer(serializers.ModelSerializer):
+    """JSON serializer for SELLER (store owner)"""
+
+    first_name = serializers.CharField(source="user.first_name")
+    last_name = serializers.CharField(source="user.last_name")
+
+    class Meta:
+        model = Customer
+        fields = ["first_name", "last_name"]
+
+
+class FavoritesStoreSerializer(serializers.ModelSerializer):
+    """JSON serializer for STORE SERIALIZER summary"""
+
+    seller = SellerSerializer(source="customer", read_only=True)
+
+    class Meta:
+        model = Store
+        fields = ["id", "name", "description", "seller"]
+
+
 class FavoriteSerializer(serializers.ModelSerializer):
     """JSON serializer for customer favorites"""
 
-    store = StoreSerializer()
+    store = FavoritesStoreSerializer()
     customer = CustomerSerializer()
 
     class Meta:
@@ -47,7 +67,7 @@ class FavoriteSerializer(serializers.ModelSerializer):
 class ListFavoriteSerializer(serializers.ModelSerializer):
     """JSON serializer for listing customer favorites"""
 
-    store = StoreSerializer()
+    store = FavoritesStoreSerializer()
     # omits customer details for list view since it's the same for all favorites in the list
 
     class Meta:
