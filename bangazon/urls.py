@@ -19,6 +19,7 @@ router.register(r"cart", CartViewSet, "cart")
 router.register(r"paymenttypes", Payments, "payment")
 router.register(r"profile", ProfileViewSet, "profile")
 router.register(r"stores", StoreViewSet, "store")
+router.register(r"recommendations", RecommendationViewSet, "recommendation")
 
 
 # Wire up our API using automatic URL routing.

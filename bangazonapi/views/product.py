@@ -420,12 +420,12 @@ class ProductViewSet(viewsets.ViewSet):
         if request.method == "POST":
             rec = recommendation.Recommendation()
             rec.recommender = Customer.objects.get(user=request.auth.user)
-            rec.customer = Customer.objects.get(user__id=request.data["recipient"])
+            rec.customer = Customer.objects.get(user__username=request.data["recipient"])
             rec.product = Product.objects.get(pk=pk)
 
             rec.save()
 
-            return response.Response(None, status=status.HTTP_204_NO_CONTENT)
+            return response.Response(status=status.HTTP_204_NO_CONTENT)
 
         return response.Response(None, status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
