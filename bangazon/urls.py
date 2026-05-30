@@ -19,7 +19,7 @@ router.register(r"cart", CartViewSet, "cart")
 router.register(r"paymenttypes", Payments, "payment")
 router.register(r"profile", ProfileViewSet, "profile")
 router.register(r"stores", StoreViewSet, "store")
-
+router.register(r"favorites", FavoriteViewSet, "favorite")
 
 # Wire up our API using automatic URL routing.
 # Additionally, we include login URLs for the browsable API.
@@ -45,4 +45,5 @@ urlpatterns = [
         inexpensive_products_report,
         name="inexpensive_products"
     )
+
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
