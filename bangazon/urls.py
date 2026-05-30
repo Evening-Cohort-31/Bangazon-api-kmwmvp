@@ -5,7 +5,7 @@ from rest_framework import routers
 from rest_framework.authtoken.views import obtain_auth_token
 from bangazonapi.models import *
 from bangazonapi.views import *
-from bangazonapi.views.report import completed_orders_report, pending_orders_report
+from bangazonapi.views.report import completed_orders_report, pending_orders_report, inexpensive_products_report
 
 # pylint: disable=invalid-name
 router = routers.DefaultRouter(trailing_slash=False)
@@ -39,5 +39,10 @@ urlpatterns = [
         pending_orders_report,
         name="pending_orders"
 
+    ),
+    path(
+        "reports/inexpensive_products",
+        inexpensive_products_report,
+        name="inexpensive_products"
     )
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
