@@ -263,7 +263,7 @@ class FavoriteViewSet(ViewSet):
         """
         try:
             customer = Customer.objects.get(user=request.auth.user)
-            favorite = Favorite.objects.get(pk=pk, customer=customer)
+            favorite = Favorite.objects.get(store__id=pk, customer=customer)
             favorite.delete()
             return Response(None, status=status.HTTP_204_NO_CONTENT)
 
