@@ -12,16 +12,22 @@ from rest_framework.decorators import action
 class RecommendationViewSet(ViewSet):
 
     def list(self, request):
-        """Handle GET requests for all items
+        """Handle GET requests for recommendation objects
 
         Returns:
             Response -- JSON serialized array
         """
         
+        #Uses query params to return recommendation objects filtered by customer recommending the product vs. customer the product was recommended to.
         try:
-            recommender = Customer.objects.get(user=request.auth.user)
-            recommendations = Recommendation.objects.filter(recommender = recommender)
+            customer = Customer.objects.get(user=request.auth.user)
 
+            if request.query_params.get('recommended_to') == 'true': 
+
+                recommendations = Recommendation.objects.filter(customer = customer)
+            else:
+                recommendations = Recommendation.objects.filter(recommender = customer)
+                
             recommendations = RecommendationSerializer(
                 recommendations, many=True, context={"request": request}
             )
@@ -31,30 +37,41 @@ class RecommendationViewSet(ViewSet):
         except Exception as ex:
              return HttpResponseServerError(ex)
      
-    @action(methods=['get'], detail=False)
-    def recommended_to(self, request):
+    # @action(methods=['get'], detail=False)
+    # def recommended_to(self, request):
+    #     """Handle GET requests for items recommended to the current user
 
-        if request.method == "GET":
+    #     Returns:
+    #         Response -- JSON serialized array
+    #     """
 
-            customer = Customer.objects.get(user=request.auth.user)
-            recommendations = Recommendation.objects.filter(customer = customer)
+    #     if request.method == "GET":
 
-            recommendations = RecommendationSerializer(
-                recommendations, many=True, context={"request": request}
-            )
+    #         try:
 
-            return Response(recommendations.data, status=status.HTTP_200_OK)
+    #             customer = Customer.objects.get(user=request.auth.user)
+    #             recommendations = Recommendation.objects.filter(customer = customer)
+
+    #             recommendations = RecommendationSerializer(
+    #                 recommendations, many=True, context={"request": request}
+    #             )
+
+    #             return Response(recommendations.data, status=status.HTTP_200_OK)
+            
+    #         except Exception as ex:
+    #             return HttpResponseServerError(ex)
     
     
 
     def create(self, request, pk=None):
-        """Handle POST operations
+        """Handle POST operations for creating a new recommendation 
 
         Returns:
             Response -- JSON serialized instance
         """
 
         try:
+            #Products are recommended by typing the username of the customer the current user wants to recommend the product to.
             customer = Customer.objects.get(user__username=request.data["username"])
         except Customer.DoesNotExist:
             return Response({"reason": "User not found"}, status=status.HTTP_404_NOT_FOUND)

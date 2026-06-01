@@ -11,7 +11,6 @@ from bangazonapi.models import (
     Customer,
     Product,
     OrderProduct,
-    Recommendation,
     Favorite,
     Store,
 )
@@ -83,10 +82,6 @@ class ProfileViewSet(ViewSet):
         """
         try:
             current_user = Customer.objects.get(user=request.auth.user)
-            current_user.recommends = Recommendation.objects.filter(
-                recommender=current_user
-            )
-
             serializer = ProfileSerializer(
                 current_user, many=False, context={"request": request}
             )
@@ -287,21 +282,6 @@ class ProfileProductSerializer(serializers.ModelSerializer):
             "name",
         )
 
-
-class RecommenderSerializer(serializers.ModelSerializer):
-    """JSON serializer for recommendations"""
-
-    customer = CustomerSerializer()
-    product = ProfileProductSerializer()
-
-    class Meta:
-        model = Recommendation
-        fields = (
-            "product",
-            "customer",
-        )
-
-
 class SellerSerializer(serializers.ModelSerializer):
     """JSON serializer for SELLER (store owner)"""
 
@@ -337,7 +317,6 @@ class ProfileSerializer(serializers.ModelSerializer):
     """JSON serializer for customer profile"""
 
     user = UserSerializer(many=False)
-    recommends = RecommenderSerializer(many=True)
     store = StoreSerializer(many=False, read_only=True)
     likes = ProfileProductSerializer(source="liked_products", many=True)
     favorite_stores = FavoriteStoreSerializer(source="favorites", many=True)
@@ -350,7 +329,7 @@ class ProfileSerializer(serializers.ModelSerializer):
             "phone_number",
             "address",
             "payment_types",
-            "recommends",
+            # "recommends",
             "store",
             "likes",
             "favorite_stores",
