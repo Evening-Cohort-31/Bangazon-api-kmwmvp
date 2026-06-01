@@ -1,7 +1,7 @@
 """Report View Functions for the Bangazon API"""
 
 from django.shortcuts import render
-from bangazonapi.models import Order, Cart
+from bangazonapi.models import Order, Cart, Product
 
 
 def completed_orders_report(request):
@@ -42,3 +42,15 @@ def pending_orders_report(request):
 
     # Renders as 'pending_orders.html' template using the context data
     return render(request, "reports/pending_orders.html", context)
+
+def inexpensive_products_report(request):
+    """View function to generate a report of products priced at $999 or less"""
+
+    inexpensive_products = (
+        Product.objects.filter(price__lte=999)
+        .order_by("price")
+    )
+
+    context = {"inexpensive_products": inexpensive_products}
+
+    return render(request, "reports/inexpensive_products.html", context)

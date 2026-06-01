@@ -11,4 +11,5 @@ from .customer import Customers
 from .user import Users
 from .store import StoreViewSet
 from .report import completed_orders_report
+from .favorite import FavoriteViewSet
 from .recommendation import RecommendationViewSet

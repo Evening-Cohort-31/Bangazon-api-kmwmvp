@@ -1,5 +1,7 @@
 """View module for handling requests about Stores"""
 
+"""View module for handling requests about Stores"""
+
 from rest_framework import (
     serializers,
     status,
