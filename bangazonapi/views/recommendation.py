@@ -22,7 +22,7 @@ class RecommendationViewSet(ViewSet):
         try:
             customer = Customer.objects.get(user=request.auth.user)
 
-            if request.query_params.get('recommended_to') == 'true': 
+            if request.query_params.get('recommended_to') == 'true':
 
                 recommendations = Recommendation.objects.filter(customer = customer)
             else:
@@ -36,33 +36,8 @@ class RecommendationViewSet(ViewSet):
         
         except Exception as ex:
              return HttpResponseServerError(ex)
-     
-    # @action(methods=['get'], detail=False)
-    # def recommended_to(self, request):
-    #     """Handle GET requests for items recommended to the current user
 
-    #     Returns:
-    #         Response -- JSON serialized array
-    #     """
-
-    #     if request.method == "GET":
-
-    #         try:
-
-    #             customer = Customer.objects.get(user=request.auth.user)
-    #             recommendations = Recommendation.objects.filter(customer = customer)
-
-    #             recommendations = RecommendationSerializer(
-    #                 recommendations, many=True, context={"request": request}
-    #             )
-
-    #             return Response(recommendations.data, status=status.HTTP_200_OK)
-            
-    #         except Exception as ex:
-    #             return HttpResponseServerError(ex)
     
-    
-
     def create(self, request, pk=None):
         """Handle POST operations for creating a new recommendation 
 
