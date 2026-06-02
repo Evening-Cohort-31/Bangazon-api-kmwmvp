@@ -1,4 +1,4 @@
-"""Tests for Cart model and API endpoints."""
+"""Tests for Order model and API endpoints."""
 
 # Test are ran using the command "python manage.py test tests" in the terminal while in the project directory.
 
@@ -7,11 +7,15 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 
-class CartTests(APITestCase):
+class OrderTests(APITestCase):
     def setUp(self) -> None:
         """
-        Create a new account and create sample category
+        Create a new account,
+        create a product to buy and it's category,
+        then add the product to the cart,
+        and then lastly create a new payment method to use for checkout
         """
+
         url = "/register"
         data = {
             "username": "steve",
@@ -70,88 +74,50 @@ class CartTests(APITestCase):
         self.assertEqual(json_response["location"], "Pittsburgh")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-    def test_add_product_to_cart(self):
-        """
-        Ensure we can add a product to a cart.
-        """
         # Add product to cart
         url = "/cart"
-        data = {"product_id": 1}
-        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token)
-        response = self.client.post(url, data, format="json")
-
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-
-        # Get cart and verify product was added
-        url = "/cart"
-        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token)
-        response = self.client.get(url, None, format="json")
-        json_response = json.loads(response.content)
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(json_response["id"], 1)
-        self.assertEqual(json_response["size"], 1)
-        self.assertEqual(len(json_response["lineitems"]), 1)
-
-    def test_remove_product_from_cart(self):
-        """
-        Ensure we can remove a product from a cart.
-        """
-        # Add product to cart
-        url = "/cart"
-        data = {"product_id": 1}
-        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token)
-        response = self.client.post(url, data, format="json")
-        json_response = json.loads(response.content)
-
-        # Verify product was added to cart before attempting to remove it
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-
-        # Remove product from cart
-        url = f"/cart/{json_response['id']}"
-        response = self.client.delete(url)
-
-        # Verify product was removed from cart
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-
-        # Get cart and verify product was removed
-        url = "/cart"
-        response = self.client.get(url, None, format="json")
-        json_response = json.loads(response.content)
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(json_response["size"], 0)
-        self.assertEqual(len(json_response["lineitems"]), 0)
-
-    def test_create_cart_for_new_user(self):
-        """
-        Ensure a new user has an empty cart.
-        """
-        # Create a new user since cart is created when a new user is created
-        url = "/register"
         data = {
-            "username": "jane",
-            "password": "Admin8*",
-            "email": "jane@doe.com",
-            "address": "123 Main St",
-            "phone_number": "555-1234",
-            "first_name": "Jane",
-            "last_name": "Doe",
+            "product_id": json_response["id"],
+        }
+        response = self.client.post(url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # Create a payment type
+        url = "/paymenttypes"
+        data = {
+            "merchant_name": "Visa",
+            "account_number": "123456789",
+            "expiration_date": "2025-12-31",
         }
         response = self.client.post(url, data, format="json")
         json_response = json.loads(response.content)
-
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertIn("token", json_response)
-        token = json_response["token"]
-        # See if cart was created for the new user
-        url = "/cart"
-        self.client.credentials(HTTP_AUTHORIZATION="Token " + token)
-        response = self.client.get(url, None, format="json")
+        self.assertEqual(json_response["id"], 1)
+        self.assertEqual(json_response["merchant_name"], "Visa")
+        self.assertEqual(json_response["account_number"], "123456789")
+        self.assertEqual(json_response["expiration_date"], "2025-12-31")
+
+    def test_create_order(self):
+        """
+        Ensure we can create a new order which entails taking the cart and converting it to an order with line items, and that the product quantity is updated accordingly.
+        """
+        url = "/orders"
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token)
+        data = {"payment_type": 1}
+        response = self.client.post(url, data, format="json")
         json_response = json.loads(response.content)
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(json_response["size"], 0)
-        self.assertEqual(len(json_response["lineitems"]), 0)
-        self.assertEqual(json_response["total"], 0.00)
-        self.assertEqual(json_response["customer"], 2)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(json_response["id"], 1)
+        self.assertEqual(json_response["payment_type"]["id"], 1)
+        self.assertEqual(json_response["payment_type"]["merchant_name"], "Visa")
+        self.assertEqual(json_response["payment_type"]["account_number"], "123456789")
+        self.assertEqual(json_response["payment_type"]["expiration_date"], "2025-12-31")
+        self.assertEqual(json_response["customer"], 1)
+        self.assertEqual(json_response["lineitems"][0]["product"]["name"], "Kite")
+        self.assertEqual(json_response["lineitems"][0]["product"]["price"], "14.99")
+        self.assertEqual(
+            json_response["lineitems"][0]["product"]["description"], "It flies high"
+        )
+        self.assertEqual(json_response["total"], 14.99)
+        self.assertEqual(json_response["size"], 1)

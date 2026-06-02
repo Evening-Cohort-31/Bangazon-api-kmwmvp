@@ -15,7 +15,7 @@ class CartLineItemSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CartProduct
-        fields = ("id","product")
+        fields = ("id", "product")
 
 
 class CartSerializer(serializers.ModelSerializer):
@@ -99,6 +99,7 @@ class CartViewSet(ViewSet):
         user_cart, _ = Cart.objects.get_or_create(customer=current_user)
 
         line_item = CartProduct()
+        # TODO: Handle quantity changes and product availability checks here before creating line item inside the cart
         line_item.product = Product.objects.get(pk=request.data["product_id"])
         line_item.cart = user_cart
         line_item.save()
