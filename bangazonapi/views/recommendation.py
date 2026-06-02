@@ -1,12 +1,9 @@
-from django.http import HttpResponseServerError
 from django.contrib.auth.models import User
 from rest_framework import serializers, status
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
-from bangazonapi.models import Recommendation
-from .product import Product
-from .customer import Customer
-from rest_framework.decorators import action
+from bangazonapi.models import Recommendation, Product, Customer
+
 
 
 class RecommendationViewSet(ViewSet):
@@ -50,15 +47,20 @@ class RecommendationViewSet(ViewSet):
             #Products are recommended by entering the username of the customer the current user wants to recommend the product to. If there is not customer with the username that was entered, a 404 error message is returned.
         try:
             customer = Customer.objects.get(user__username=request.data["username"])
-        
+            recommender = Customer.objects.get(user=request.auth.user)
             product = Product.objects.get(pk=request.data["product"])
-            if Recommendation.objects.filter(customer=customer, product=product).exists():
+            
+            if Recommendation.objects.filter(customer=customer, product=product, recommender=recommender).exists():
                 return Response({"message": "You have already recommended this product to this user."}, status=status.HTTP_400_BAD_REQUEST,)
+            
+            if customer == recommender:
+                return Response({"message": "You cannot recommend a product to yourself."}, status=status.HTTP_400_BAD_REQUEST,)
+            
 
             recommendation = Recommendation()
             recommendation.customer = customer
             recommendation.product = product
-            recommendation.recommender = Customer.objects.get(user=request.auth.user)
+            recommendation.recommender = recommender
 
         
             recommendation.save()

@@ -412,21 +412,6 @@ class ProductViewSet(viewsets.ViewSet):
         )
         return response.Response(serializer.data)
 
-    @action(methods=["post"], detail=True)
-    def recommend(self, request, pk=None):
-        """Recommend products to other users"""
-
-        if request.method == "POST":
-            rec = recommendation.Recommendation()
-            rec.recommender = Customer.objects.get(user=request.auth.user)
-            rec.customer = Customer.objects.get(user__username=request.data["recipient"])
-            rec.product = Product.objects.get(pk=pk)
-
-            rec.save()
-
-            return response.Response(status=status.HTTP_204_NO_CONTENT)
-
-        return response.Response(None, status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
     @action(methods=["post"], detail=True)
     def like(self, request, pk=None):
