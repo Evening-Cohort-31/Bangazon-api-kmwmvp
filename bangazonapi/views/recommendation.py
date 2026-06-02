@@ -34,8 +34,11 @@ class RecommendationViewSet(ViewSet):
 
             return Response(recommendations.data, status=status.HTTP_200_OK)
         
-        except Exception as ex:
-             return HttpResponseServerError(ex)
+        except Customer.DoesNotExist:
+             return Response(
+                {"message": "Customer profile not found for this user."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
     
     def create(self, request, pk=None):
@@ -44,24 +47,30 @@ class RecommendationViewSet(ViewSet):
         Returns:
             Response -- JSON serialized instance
         """
-
+            #Products are recommended by entering the username of the customer the current user wants to recommend the product to. If there is not customer with the username that was entered, a 404 error message is returned.
         try:
-            #Products are recommended by typing the username of the customer the current user wants to recommend the product to.
             customer = Customer.objects.get(user__username=request.data["username"])
-        except Customer.DoesNotExist:
-            return Response({"reason": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+            product = Product.objects.get(pk=request.data["product"])
+            if Recommendation.objects.filter(customer=customer, product=product).exists():
+                return Response({"message": "You have already recommended this product to this user."}, status=status.HTTP_400_BAD_REQUEST,)
 
-        recommendation = Recommendation()
-        recommendation.customer = customer
-        recommendation.product = Product.objects.get(pk=request.data["product"])
-        recommendation.recommender = Customer.objects.get(user=request.auth.user)
+            recommendation = Recommendation()
+            recommendation.customer = customer
+            recommendation.product = product
+            recommendation.recommender = Customer.objects.get(user=request.auth.user)
 
-        try:
+        
             recommendation.save()
             serializer = RecommendationSerializer(recommendation)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        except Exception as ex:
-            return Response({"reason": ex.args[0]}, status=status.HTTP_400_BAD_REQUEST)
+        
+        except Customer.DoesNotExist:
+            return Response({"message": "A customer with this username does not exist"}, status=status.HTTP_404_NOT_FOUND)
+        
+        except Product.DoesNotExist:
+            return Response({"message": "The requested product does not exist."}, status=status.HTTP_404_NOT_FOUND)
+        
 
 
 
@@ -70,7 +79,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ("first_name", "last_name", "email")
+        fields = ("username", "first_name", "last_name", "email")
 
 
 
@@ -88,7 +97,7 @@ class CustomerSerializer(serializers.ModelSerializer):
 
 
 class ProfileProductSerializer(serializers.ModelSerializer):
-    """ JSON serializer for products liked by the user in their profile """
+    """ JSON serializer for products listed on a user's profile """
 
     class Meta:
         model = Product
