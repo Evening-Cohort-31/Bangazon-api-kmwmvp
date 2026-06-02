@@ -68,13 +68,14 @@ class RecommendationViewSet(ViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         
         except Customer.DoesNotExist:
-            return Response({"message": "A customer with this username does not exist"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"message": "Please enter a valid username."}, status=status.HTTP_404_NOT_FOUND)
         
         except Product.DoesNotExist:
             return Response({"message": "The requested product does not exist."}, status=status.HTTP_404_NOT_FOUND)
+        
         except KeyError:
             return Response(
-                {"message": "Username and product are required."},
+                {"message": "Username and product required."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         
