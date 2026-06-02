@@ -164,6 +164,13 @@ class ProductViewSet(viewsets.ViewSet):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
+        if new_product.quantity < Decimal("0.00"):
+            return response.Response(
+                {"message": "Product quantity cannot be negative."},
+                status=status.HTTP_400_BAD_REQUEST
+            )    
+        
+        new_product.save()
             if "image_path" in request.data:
                 format, imgstr = request.data["image_path"].split(";base64,")
                 ext = format.split("/")[-1]
@@ -183,6 +190,9 @@ class ProductViewSet(viewsets.ViewSet):
                 new_product, context={"request": request}
             )
 
+        
+
+        serializer = ProductSerializer(new_product, context={"request": request})
             return response.Response(
                 serialized_product.data, status=status.HTTP_201_CREATED
             )
@@ -290,6 +300,13 @@ class ProductViewSet(viewsets.ViewSet):
                 {"message": "Product price needs to be no more than 17,500"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        
+        if product.quantity < Decimal("0"):
+            return response.Response(
+                {"message": "Product quantity cannot be negative."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+    
 
         product.save()
 
