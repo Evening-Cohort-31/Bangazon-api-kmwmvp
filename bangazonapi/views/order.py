@@ -130,22 +130,29 @@ class OrderViewSet(ViewSet):
         customer = Customer.objects.get(user=request.auth.user)
         # Handle case where cart is empty and order is created without line items
         try:
+            # Get the customer's cart, payment type, and current date to create the order
             customer_cart = Cart.objects.get(customer=customer)
             payment = Payment.objects.get(pk=request.data["payment_type"])
-            created_date = datetime.datetime.now()
 
+            # Create the and instance of the order
             customer_order = Order.objects.create(
-                customer=customer, payment_type=payment, created_date=created_date
+                customer=customer, payment_type=payment
             )
 
+            # TODO: Handle quantity changes and product availability checks here before creating order products
+            # For each item in the cart, create an order product for the line item
             for item in CartProduct.objects.filter(cart=customer_cart):
                 OrderProduct.objects.create(order=customer_order, product=item.product)
 
+            # Lasly, clear the cart of all items
             CartProduct.objects.filter(cart=customer_cart).delete()
-
             customer_cart.delete()
 
-            return Response({}, status=status.HTTP_204_NO_CONTENT)
+            # Now return the order that was just created with all line items and payment details
+            return Response(
+                OrderSerializer(customer_order, context={"request": request}).data,
+                status=status.HTTP_201_CREATED,
+            )
         except Cart.DoesNotExist:
             return Response(
                 {"message": "The cart is empty."},
