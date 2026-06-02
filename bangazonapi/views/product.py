@@ -57,6 +57,9 @@ class ProductSerializer(serializers.ModelSerializer):
 
 
 class LineItemProductSerializer(serializers.ModelSerializer):
+    """JSON serializer for products in line items (cart items)"""
+
+    # TODO: Include Quantity about the product in the line item to support multiple quantities of the same product in the cart/order
     is_liked = serializers.SerializerMethodField()
 
     def get_is_liked(self, obj):
@@ -138,48 +141,57 @@ class ProductViewSet(viewsets.ViewSet):
                 ]
             }
         """
-        new_product = Product()
-        new_product.name = request.data["name"]
-        new_product.price = Decimal(request.data["price"])
-        new_product.description = request.data["description"]
-        new_product.quantity = request.data["quantity"]
-        new_product.location = request.data["location"]
+        try:
+            customer = Customer.objects.get(user=request.auth.user)
 
-        customer = Customer.objects.get(user=request.auth.user)
-        new_product.customer = customer
+            new_product = Product()
+            new_product.customer = customer
+            new_product.name = request.data["name"]
+            new_product.price = Decimal(request.data["price"])
+            new_product.description = request.data["description"]
+            new_product.quantity = request.data["quantity"]
+            new_product.location = request.data["location"]
 
-        if new_product.price < Decimal("0.00"):
+            if new_product.price < Decimal("0.00"):
+                return response.Response(
+                    {"message": "Product price cannot be negative."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            if new_product.price > Decimal("17500.00"):
+                return response.Response(
+                    {"message": "Product price needs to be no more than 17,500"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            if "image_path" in request.data:
+                format, imgstr = request.data["image_path"].split(";base64,")
+                ext = format.split("/")[-1]
+                data = ContentFile(
+                    base64.b64decode(imgstr),
+                    name=f'{new_product.id}-{request.data["name"]}.{ext}',
+                )
+
+                new_product.image_path = data
+
+            new_product.save()
+
+            category_ids = request.data.get("category_ids", [])
+            new_product.categories.set(category_ids)
+
+            serialized_product = ProductSerializer(
+                new_product, context={"request": request}
+            )
+
             return response.Response(
-                {"message": "Product price cannot be negative."},
-                status=status.HTTP_400_BAD_REQUEST,
+                serialized_product.data, status=status.HTTP_201_CREATED
             )
 
-        if new_product.price > Decimal("17500.00"):
+        except Customer.DoesNotExist:
             return response.Response(
-                {"message": "Product price needs to be no more than 17,500"},
-                status=status.HTTP_400_BAD_REQUEST,
+                {"message": "Customer not found."},
+                status=status.HTTP_404_NOT_FOUND,
             )
-
-        new_product.save()
-
-        category_ids = request.data.get("category_ids", [])
-        new_product.categories.set(category_ids)
-
-        if "image_path" in request.data:
-            format, imgstr = request.data["image_path"].split(";base64,")
-            ext = format.split("/")[-1]
-            data = ContentFile(
-                base64.b64decode(imgstr),
-                name=f'{new_product.id}-{request.data["name"]}.{ext}',
-            )
-
-            new_product.image_path = data
-
-        new_product.save()
-
-        serializer = ProductSerializer(new_product, context={"request": request})
-
-        return response.Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def retrieve(self, request, pk=None):
         """
