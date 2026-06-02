@@ -38,7 +38,7 @@ class RecommendationViewSet(ViewSet):
             )
 
     
-    def create(self, request, pk=None):
+    def create(self, request):
         """Handle POST operations for creating a new recommendation 
 
         Returns:
@@ -72,6 +72,11 @@ class RecommendationViewSet(ViewSet):
         
         except Product.DoesNotExist:
             return Response({"message": "The requested product does not exist."}, status=status.HTTP_404_NOT_FOUND)
+        except KeyError:
+            return Response(
+                {"message": "Username and product are required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         
 
 
@@ -98,7 +103,7 @@ class CustomerSerializer(serializers.ModelSerializer):
         )
 
 
-class ProfileProductSerializer(serializers.ModelSerializer):
+class ProductSerializer(serializers.ModelSerializer):
     """ JSON serializer for products listed on a user's profile """
 
     class Meta:
@@ -116,7 +121,7 @@ class RecommendationSerializer(serializers.ModelSerializer):
     """ JSON serializer for recommendations """
 
     customer = CustomerSerializer()
-    product = ProfileProductSerializer()
+    product = ProductSerializer()
     recommender = CustomerSerializer()
 
     class Meta:

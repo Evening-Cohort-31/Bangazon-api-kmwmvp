@@ -178,7 +178,6 @@ class ProfileSerializer(serializers.ModelSerializer):
             "phone_number",
             "address",
             "payment_types",
-            # "recommends",
             "store",
             "likes",
             "favorite_stores",
