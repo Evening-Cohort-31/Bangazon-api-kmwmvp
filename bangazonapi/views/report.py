@@ -66,4 +66,5 @@ def expensive_products_report(request):
     context = {"expensive_products": expensive_products}
 
     return render(request, "reports/expensive_products.html", context)
-    
+
+# End-of-File (EOF)
