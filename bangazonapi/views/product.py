@@ -166,11 +166,12 @@ class ProductViewSet(viewsets.ViewSet):
 
             if new_product.quantity < Decimal("0.00"):
                 return response.Response(
-                    {"message": "Product quantity cannot be negative."},
-                    status=status.HTTP_400_BAD_REQUEST
-                )    
+                {"message": "Product quantity cannot be negative."},
+                status=status.HTTP_400_BAD_REQUEST
+            )    
         
             new_product.save()
+
             if "image_path" in request.data:
                 format, imgstr = request.data["image_path"].split(";base64,")
                 ext = format.split("/")[-1]
@@ -186,16 +187,10 @@ class ProductViewSet(viewsets.ViewSet):
             category_ids = request.data.get("category_ids", [])
             new_product.categories.set(category_ids)
 
-            serialized_product = ProductSerializer(
-                new_product, context={"request": request}
-            )
-
-        
 
             serializer = ProductSerializer(new_product, context={"request": request})
-            return response.Response(
-                serialized_product.data, status=status.HTTP_201_CREATED
-            )
+            return response.Response(serializer.data, status=status.HTTP_201_CREATED
+                )
 
         except Customer.DoesNotExist:
             return response.Response(
