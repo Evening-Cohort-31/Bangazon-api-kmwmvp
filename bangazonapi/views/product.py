@@ -187,6 +187,7 @@ class ProductViewSet(viewsets.ViewSet):
             category_ids = request.data.get("category_ids", [])
             new_product.categories.set(category_ids)
 
+
             serializer = ProductSerializer(new_product, context={"request": request})
             return response.Response(serializer.data, status=status.HTTP_201_CREATED
                 )
