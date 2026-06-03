@@ -1,7 +1,5 @@
 """View module for handling requests about Stores"""
 
-"""View module for handling requests about Stores"""
-
 from rest_framework import (
     serializers,
     status,
@@ -75,6 +73,40 @@ class StoreViewSet(viewsets.ViewSet):
         serializer = StoreSerializer(new_store, context={"request": request})
 
         return response.Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def update(self, request, pk=None):
+
+        try:
+            customer = Customer.objects.get(user=request.auth.user)
+            store = Store.objects.get(pk=pk)
+
+            if store.customer != customer:
+                return response.Response(
+                    {"message": "You cannot update this store."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+        except Store.DoesNotExist:
+            return response.Response(
+                {"message": "Store not found."}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        except Customer.DoesNotExist:
+            return response.Response(
+                {"message": "Customer profile not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # Set the attributes of the store to the values passed in the request, or keep the current value if not provided
+        if "name" in request.data:
+            store.name = request.data["name"]
+
+        if "description" in request.data:
+            store.description = request.data["description"]
+
+        store.save()
+
+        return response.Response(status=status.HTTP_204_NO_CONTENT)
 
     def list(self, request):
         stores = Store.objects.all()
