@@ -164,13 +164,13 @@ class ProductViewSet(viewsets.ViewSet):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-        if new_product.quantity < Decimal("0.00"):
-            return response.Response(
-                {"message": "Product quantity cannot be negative."},
-                status=status.HTTP_400_BAD_REQUEST
-            )    
+            if new_product.quantity < Decimal("0.00"):
+                return response.Response(
+                    {"message": "Product quantity cannot be negative."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )    
         
-        new_product.save()
+            new_product.save()
             if "image_path" in request.data:
                 format, imgstr = request.data["image_path"].split(";base64,")
                 ext = format.split("/")[-1]
@@ -192,7 +192,7 @@ class ProductViewSet(viewsets.ViewSet):
 
         
 
-        serializer = ProductSerializer(new_product, context={"request": request})
+            serializer = ProductSerializer(new_product, context={"request": request})
             return response.Response(
                 serialized_product.data, status=status.HTTP_201_CREATED
             )
@@ -441,21 +441,6 @@ class ProductViewSet(viewsets.ViewSet):
         )
         return response.Response(serializer.data)
 
-    @action(methods=["post"], detail=True)
-    def recommend(self, request, pk=None):
-        """Recommend products to other users"""
-
-        if request.method == "POST":
-            rec = recommendation.Recommendation()
-            rec.recommender = Customer.objects.get(user=request.auth.user)
-            rec.customer = Customer.objects.get(user__id=request.data["recipient"])
-            rec.product = Product.objects.get(pk=pk)
-
-            rec.save()
-
-            return response.Response(None, status=status.HTTP_204_NO_CONTENT)
-
-        return response.Response(None, status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
     @action(methods=["post"], detail=True)
     def like(self, request, pk=None):

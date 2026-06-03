@@ -17,6 +17,7 @@ python manage.py loaddata cart
 python manage.py loaddata cart_product
 python manage.py loaddata order_product
 python manage.py loaddata favoritesellers
+python manage.py loaddata recommendations
 
 mkdir -p media/products
 cp bangazonapi/fixtures/seed_images/* media/products/
