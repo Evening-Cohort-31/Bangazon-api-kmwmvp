@@ -9,9 +9,9 @@ class ProductRating(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     rating = models.IntegerField(validators=[MinValueValidator(0), MaxValueValidator(5)])
 
-class Meta:
-    verbose_name = ("productrating")
-    verbose_name_plural = ("productratings")
+    class Meta:
+        verbose_name = ("productrating")
+        verbose_name_plural = ("productratings")
 
-def __str__(self):
-    return self.rating
+        def __str__(self):
+            return self.rating

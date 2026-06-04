@@ -6,6 +6,7 @@ import json
 import datetime
 from rest_framework import status
 from rest_framework.test import APITestCase
+from bangazonapi.models import Product
 
 
 class ProductTests(APITestCase):
@@ -132,3 +133,30 @@ class ProductTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     # TODO: Product can be rated. Assert average rating exists.
+    
+    def test_rate_product(self):
+
+        product = Product()
+
+        url = (f"/products/{product.id}/rate_product")
+
+        data = {
+            "customer" : 7,
+            "product" : {product.id},
+            "rating" : 5
+        }
+
+         # Initiate request and store response
+        response = self.client.post(url, data, format='json')
+
+        # Parse the JSON in the response body
+        json_response = json.loads(response.content)
+
+        # Assert that the rating was created
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # Assert that the properties on the created resource are correct
+        self.assertEqual(json_response["customer"], 7)
+        self.assertEqual(json_response["product"], {product.id})
+        self.assertEqual(json_response["rating"], 5)
+

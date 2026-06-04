@@ -3,6 +3,7 @@
 import base64
 from decimal import Decimal
 
+
 from django.core.files.base import ContentFile
 from rest_framework import (
     serializers,
@@ -12,7 +13,7 @@ from rest_framework import (
     response,
 )
 from rest_framework.decorators import action
-from bangazonapi.models import Customer, Product, ProductCategory, recommendation
+from bangazonapi.models import Customer, Product, ProductCategory, ProductRating
 
 
 class CategorySummarySerializer(serializers.ModelSerializer):
@@ -21,6 +22,13 @@ class CategorySummarySerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductCategory
         fields = ["id", "name"]
+
+class ProductRatingSerializer(serializers.ModelSerializer):
+    """JSON serializer for product ratings"""
+
+    class Meta:
+        model = ProductRating
+        fields = ["id", "product", "customer", "rating"] 
 
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -460,3 +468,27 @@ class ProductViewSet(viewsets.ViewSet):
             return response.Response(
                 {"message": "Product not found"}, status=status.HTTP_404_NOT_FOUND
             )
+    
+    @action(methods=["post"], detail=True)
+    def rate_product(self, request, pk=None):
+        try:
+            customer = Customer.objects.get(user=request.auth.user)
+            product = Product.objects.get(pk=pk)
+
+            serializer = ProductRatingSerializer(data={
+                "customer": customer.id,
+                "product": product.id,
+                "rating": request.data["rating"]
+            }, context={"request": request})
+            
+            if serializer.is_valid():
+                serializer.save()
+                return response.Response(serializer.data, status=status.HTTP_201_CREATED)
+            else:
+                return response.Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        except Product.DoesNotExist:
+            return response.Response(
+                {"message": "Product not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+ 
