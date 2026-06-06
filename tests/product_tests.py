@@ -136,15 +136,16 @@ class ProductTests(APITestCase):
     
     def test_rate_product(self):
 
-        product = Product()
+        product_id = self.test_create_product()
 
-        url = (f"/products/{product.id}/rate_product")
+        url = (f"/products/{product_id}/rate_product")
 
         data = {
-            "customer" : 7,
-            "product" : {product.id},
+            "product" : product_id,
             "rating" : 5
         }
+        
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token)
 
          # Initiate request and store response
         response = self.client.post(url, data, format='json')
@@ -156,7 +157,22 @@ class ProductTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         # Assert that the properties on the created resource are correct
-        self.assertEqual(json_response["customer"], 7)
-        self.assertEqual(json_response["product"], {product.id})
+        self.assertEqual(json_response["product"], product_id)
         self.assertEqual(json_response["rating"], 5)
+    
+        # Assert average rating exists.
+
+        #Initiate new GET request to get newly created product with rating
+        response = self.client.get(f"/products/{product_id}")
+
+        # Parse the JSON in the response body
+        json_response = json.loads(response.content)
+
+        #Assert that the product exists and the GET request was successful.
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        #Assert that the rating property is correct:
+        self.assertEqual(json_response["average_rating"], 5)
+
+
 
