@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<!--
+    This page is rendered directly by Django on the server and returned as plain HTML.
+    It does not require the Next.js frontend client. You can visit it directly in the
+    browser at  http://localhost:8000/reports/favoritesellers?customer={integer} while the Django dev server is running.
+-->
+
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Orders Report</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 2rem;
+            background-color: #f4f6f9;
+            color: #293241;
+        }
+
+        h1 {
+            color: #3d5a80;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        th {
+            background-color: #3d5a80;
+            color: #ffffff;
+            padding: 0.6rem 1rem;
+            text-align: left;
+        }
+
+        td {
+            padding: 0.6rem 1rem;
+            border-bottom: 1px solid #98c1d9;
+        }
+
+        tr:hover td {
+            background-color: #e8f0f7;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Favorite Sellers Report </h1>
+    {% for customer in favorite_sellers %}
+    <div class="customer-block">
+        <h2>{{ customer.user.first.name }} {{ customer.user.last.name }}</h2>
+        <ul>
+            {% for favorite in customer.favorites.all %}
+            <li>{{ favorite.store.name }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% empty %}
+    <p> No favorites found.</p>
+    {% endfor %}
+</body>
+
+</html>
