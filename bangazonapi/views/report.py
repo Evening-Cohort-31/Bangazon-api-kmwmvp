@@ -1,7 +1,8 @@
 """Report View Functions for the Bangazon API"""
 
 from django.shortcuts import render
-from bangazonapi.models import Order, Cart, Product, Customer
+from bangazonapi.models import Order, Cart, Product, Store, Customer
+from django.db.models import Count
 
 
 def completed_orders_report(request):
@@ -70,15 +71,16 @@ def expensive_products_report(request):
 def favorite_sellers_report(request):
     """View function to generate a report of sellers that have been favorites by customers"""
 
-    favorite_sellers = (
-        Customer.objects.prefetch_related("favorites__store__customer__user")
-        .filter(favorites__isnull=False)
+    customers_with_favorites = (
+        Customer.objects.filter(favorites__isnull=False)
+        .prefetch_related("favorites__store")
+        .select_related("user")
         .distinct()
     )
 
-    context = {"favorite_sellers": favorite_sellers}
+    context = {"customers_with_favorites": customers_with_favorites}
 
-    return render(request, "reports/favorite_sellers.html")
+    return render(request, "reports/favorite_sellers.html", context)
 
 
 
