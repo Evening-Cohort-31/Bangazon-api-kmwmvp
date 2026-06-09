@@ -54,3 +54,17 @@ def inexpensive_products_report(request):
     context = {"inexpensive_products": inexpensive_products}
 
     return render(request, "reports/inexpensive_products.html", context)
+
+def expensive_products_report(request):
+    """View function to generate a report of products priced at $1000 or more"""
+
+    expensive_products = (
+        Product.objects.filter(price__gte=1000)
+        .order_by("price")
+    )
+
+    context = {"expensive_products": expensive_products}
+
+    return render(request, "reports/expensive_products.html", context)
+
+# End-of-File (EOF)
