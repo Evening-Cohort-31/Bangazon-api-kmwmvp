@@ -469,43 +469,60 @@ class ProductViewSet(viewsets.ViewSet):
                 {"message": "Product not found"}, status=status.HTTP_404_NOT_FOUND
             )
     
-    @action(methods=["post"], detail=True)
+    @action(methods=["post", "put"], detail=True)
     def rate_product(self, request, pk=None):
         
         try:
             customer = Customer.objects.get(user=request.auth.user)
             product = Product.objects.get(pk=pk)
 
-            serializer = ProductRatingSerializer(data={
+            
+        
+            if request.method == "POST":
+
+                if ProductRating.objects.filter(customer=customer, product=product).exists():
+                    return response.Response({"message": "You have already rated this product."}, status=status.HTTP_400_BAD_REQUEST,)
+                
+                serializer = ProductRatingSerializer(data={
                 "customer": customer.id,
                 "product": product.id,
                 "rating": request.data["rating"]
-            }, context={"request": request})
-        
-            # if request.method == "post":
+                }, context={"request": request})
 
-            if ProductRating.objects.filter(customer=customer, product=product).exists():
-                return response.Response({"message": "You have already rated this product."}, status=status.HTTP_400_BAD_REQUEST,)
-
-            if serializer.is_valid():
-                serializer.save()
-                return response.Response(serializer.data, status=status.HTTP_201_CREATED)
+                if serializer.is_valid():
+                    serializer.save()
+                    return response.Response(serializer.data, status=status.HTTP_201_CREATED)
             
-            else:
-                return response.Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                else:
+                    return response.Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
             
-            # if request.method == "put":
+            if request.method == "PUT":
 
-            #     rating = ProductRating.objects.get(customer=customer, product=product)
+                try:
 
-            #     if "rating" in request.data:
-            #         rating.rating = request.data["rating"]
+                    rating = ProductRating.objects.get(customer=customer, product=product)
+
+                    if "rating" in request.data:
+                        rating.rating = request.data["rating"]
+
+                        serializer=ProductRatingSerializer(rating, data={
+                            "customer": customer.id,
+                            "product": product.id,
+                            "rating": request.data["rating"]})
+
+                        if serializer.is_valid():
+                            serializer.save()
                 
-            #         rating.save()
+                            return response.Response(serializer.data, status=status.HTTP_202_ACCEPTED)
+                        else:
+                            return response.Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                    else:
+                        return response.Response({"message": "Please provide a Rating."}, status=status.HTTP_400_BAD_REQUEST)
                 
-            #         return response.Response(serializer.data, status=status.HTTP_201_CREATED)
-            #     else:
-            #         return response.Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                except ProductRating.DoesNotExist:
+                    return response.Response(
+                        {"message": "You have not rated this product yet"}, status=status.HTTP_404_NOT_FOUND
+                    )
             
         
         except Product.DoesNotExist:
