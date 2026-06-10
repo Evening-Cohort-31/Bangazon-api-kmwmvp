@@ -471,6 +471,7 @@ class ProductViewSet(viewsets.ViewSet):
     
     @action(methods=["post"], detail=True)
     def rate_product(self, request, pk=None):
+        
         try:
             customer = Customer.objects.get(user=request.auth.user)
             product = Product.objects.get(pk=pk)
@@ -480,12 +481,32 @@ class ProductViewSet(viewsets.ViewSet):
                 "product": product.id,
                 "rating": request.data["rating"]
             }, context={"request": request})
-            
+        
+            # if request.method == "post":
+
+            if ProductRating.objects.filter(customer=customer, product=product).exists():
+                return response.Response({"message": "You have already rated this product."}, status=status.HTTP_400_BAD_REQUEST,)
+
             if serializer.is_valid():
                 serializer.save()
                 return response.Response(serializer.data, status=status.HTTP_201_CREATED)
+            
             else:
                 return response.Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
+            # if request.method == "put":
+
+            #     rating = ProductRating.objects.get(customer=customer, product=product)
+
+            #     if "rating" in request.data:
+            #         rating.rating = request.data["rating"]
+                
+            #         rating.save()
+                
+            #         return response.Response(serializer.data, status=status.HTTP_201_CREATED)
+            #     else:
+            #         return response.Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
         
         except Product.DoesNotExist:
             return response.Response(
