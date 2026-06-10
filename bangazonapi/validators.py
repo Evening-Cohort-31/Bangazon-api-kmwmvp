@@ -1,4 +1,4 @@
-"""Custom password validators for the raterapi application."""
+"""Custom password validators for the Bangazon API application."""
 
 import re
 
@@ -29,3 +29,27 @@ class StrongPasswordValidator:
             "Your password must contain at least one uppercase letter, "
             "one lowercase letter, one number, and one symbol."
         )
+
+
+class CreditCardValidator:
+    """Validate that a credit card number is in the correct format."""
+
+    def validate(self, card_number):
+        if not re.fullmatch(r"\d{13,19}", card_number):
+            raise ValidationError(
+                _("Credit card number must be between 13 and 19 digits.")
+            )
+
+    def get_help_text(self):
+        return _("Credit card number must be between 13 and 19 digits.")
+
+
+class CreditCardDateValidator:
+    """Validate that a credit card expiration date is in the correct format."""
+
+    def validate(self, expiration_date):
+        if not re.fullmatch(r"\d{2}/\d{2}", expiration_date):
+            raise ValidationError(_("Expiration date must be in the format MM/YY."))
+
+    def get_help_text(self):
+        return _("Expiration date must be in the format MM/YY.")
