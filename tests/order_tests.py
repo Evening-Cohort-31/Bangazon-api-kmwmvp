@@ -5,6 +5,7 @@
 import json
 from rest_framework import status
 from rest_framework.test import APITestCase
+from bangazonapi.models import Cart, CartProduct, Order
 
 
 class OrderTests(APITestCase):
@@ -121,3 +122,25 @@ class OrderTests(APITestCase):
         )
         self.assertEqual(json_response["total"], 14.99)
         self.assertEqual(json_response["size"], 1)
+        self.assertEqual(Cart.objects.count(), 1)
+        self.assertEqual(CartProduct.objects.count(), 0)
+
+    def test_cannot_create_order_with_empty_cart(self):
+        """Ensure an empty cart cannot be converted into an order."""
+        CartProduct.objects.all().delete()
+
+        response = self.client.post("/orders", {"payment_type": 1}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Order.objects.count(), 0)
+
+    def test_missing_cart_is_recreated_as_empty(self):
+        """Ensure checkout handles a missing cart as an empty cart."""
+        CartProduct.objects.all().delete()
+        Cart.objects.all().delete()
+
+        response = self.client.post("/orders", {"payment_type": 1}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Cart.objects.count(), 1)
+        self.assertEqual(Order.objects.count(), 0)
