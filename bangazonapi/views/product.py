@@ -469,7 +469,7 @@ class ProductViewSet(viewsets.ViewSet):
                 {"message": "Product not found"}, status=status.HTTP_404_NOT_FOUND
             )
     
-    @action(methods=["post", "put"], detail=True)
+    @action(methods=["post", "put", "get"], detail=True)
     def rate_product(self, request, pk=None):
         
         try:
@@ -496,6 +496,22 @@ class ProductViewSet(viewsets.ViewSet):
                 else:
                     return response.Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
             
+            if request.method == "GET":
+
+                try: 
+
+                    rating = ProductRating.objects.get(customer=customer, product=product)
+
+                    serializer = ProductRatingSerializer(rating)
+
+                    return response.Response(serializer.data, status=status.HTTP_200_OK)
+                
+                except ProductRating.DoesNotExist:
+                    return response.Response(
+                        {"message": "You have not rated this product yet"}, status=status.HTTP_404_NOT_FOUND
+                    )
+
+
             if request.method == "PUT":
 
                 try:
