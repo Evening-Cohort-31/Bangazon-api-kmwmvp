@@ -87,16 +87,16 @@ class OrderTests(APITestCase):
         url = "/paymenttypes"
         data = {
             "merchant_name": "Visa",
-            "account_number": "123456789",
-            "expiration_date": "2025-12-31",
+            "account_number": "1234567899999",
+            "expiration_date": "12/27",
         }
         response = self.client.post(url, data, format="json")
         json_response = json.loads(response.content)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(json_response["id"], 1)
         self.assertEqual(json_response["merchant_name"], "Visa")
-        self.assertEqual(json_response["account_number"], "123456789")
-        self.assertEqual(json_response["expiration_date"], "2025-12-31")
+        self.assertEqual(json_response["account_number"], "1234567899999")
+        self.assertEqual(json_response["expiration_date"], "12/27")
 
     def test_create_order(self):
         """
@@ -112,8 +112,10 @@ class OrderTests(APITestCase):
         self.assertEqual(json_response["id"], 1)
         self.assertEqual(json_response["payment_type"]["id"], 1)
         self.assertEqual(json_response["payment_type"]["merchant_name"], "Visa")
-        self.assertEqual(json_response["payment_type"]["account_number"], "123456789")
-        self.assertEqual(json_response["payment_type"]["expiration_date"], "2025-12-31")
+        self.assertEqual(
+            json_response["payment_type"]["account_number"], "1234567899999"
+        )
+        self.assertEqual(json_response["payment_type"]["expiration_date"], "12/27")
         self.assertEqual(json_response["customer"], 1)
         self.assertEqual(json_response["lineitems"][0]["product"]["name"], "Kite")
         self.assertEqual(json_response["lineitems"][0]["product"]["price"], "14.99")

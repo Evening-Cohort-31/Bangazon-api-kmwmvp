@@ -1,13 +1,15 @@
 """View module for handling requests about customer payment types"""
 
+from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
 from rest_framework import serializers
 from rest_framework import status
 from bangazonapi.models import Payment, Customer
+from bangazonapi.validators import CreditCardValidator, CreditCardDateValidator
 
 
-class PaymentSerializer(serializers.HyperlinkedModelSerializer):
+class PaymentSerializer(serializers.ModelSerializer):
     """JSON serializer for Payment
 
     Arguments:
@@ -16,20 +18,32 @@ class PaymentSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = Payment
-        url = serializers.HyperlinkedIdentityField(
-            view_name="payment", lookup_field="id"
-        )
         fields = (
             "id",
-            "url",
             "merchant_name",
             "account_number",
             "expiration_date",
             "create_date",
         )
 
+    def validate_account_number(self, value):
+        """Validator for credit card number format 13 to 19 digits"""
+        try:
+            CreditCardValidator().validate(value)
+        except DjangoValidationError as e:
+            raise serializers.ValidationError(e.messages)
+        return value
 
-class Payments(ViewSet):
+    def validate_expiration_date(self, value):
+        """Validator for credit card expiration date format MM/YY"""
+        try:
+            CreditCardDateValidator().validate(value)
+        except DjangoValidationError as e:
+            raise serializers.ValidationError(e.messages)
+        return value
+
+
+class PaymentViewSet(ViewSet):
 
     def create(self, request):
         """Handle POST operations
@@ -37,17 +51,22 @@ class Payments(ViewSet):
         Returns:
             Response -- JSON serialized payment instance
         """
-        new_payment = Payment()
-        new_payment.merchant_name = request.data["merchant_name"]
-        new_payment.account_number = request.data["account_number"]
-        new_payment.expiration_date = request.data["expiration_date"]
-        customer = Customer.objects.get(user=request.auth.user)
-        new_payment.customer = customer
-        new_payment.save()
+        serializer = PaymentSerializer(data=request.data)
 
-        serializer = PaymentSerializer(new_payment, context={"request": request})
+        # Validate the incoming data and raise an exception if any is invalid.
+        # Validation errors are propagated as a 400 Bad Request response
+        serializer.is_valid(raise_exception=True)
 
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        try:
+            customer = Customer.objects.get(user=request.auth.user)
+            serializer.save(customer=customer)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        except Customer.DoesNotExist:
+            return Response(
+                {"message": "You cannot add a payment method for this account"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
     def retrieve(self, request, pk=None):
         """Handle GET requests for single payment type
