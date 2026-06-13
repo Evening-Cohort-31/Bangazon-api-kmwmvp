@@ -48,8 +48,10 @@ class CreditCardDateValidator:
     """Validate that a credit card expiration date is in the correct format."""
 
     def validate(self, expiration_date):
-        if not re.fullmatch(r"\d{2}/\d{2}", expiration_date):
-            raise ValidationError(_("Expiration date must be in the format MM/YY."))
+        if not re.fullmatch(r"(0[1-9]|1[0-2])/\d{2}", expiration_date):
+            raise ValidationError(
+                _("Expiration date must be in the format MM/YY with a valid month.")
+            )
 
     def get_help_text(self):
-        return _("Expiration date must be in the format MM/YY.")
+        return _("Expiration date must be in the format MM/YY with a valid month.")
