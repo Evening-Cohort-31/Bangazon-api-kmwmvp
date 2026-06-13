@@ -138,7 +138,7 @@ class CartViewSet(ViewSet):
     def delete_all(self, request):
 
         current_user = Customer.objects.get(user=request.auth.user)
-        open_order = Cart.objects.get(customer=current_user)
-        CartProduct.objects.filter(cart=open_order).delete()
+        user_cart, _ = Cart.objects.get_or_create(customer=current_user)
+        CartProduct.objects.filter(cart=user_cart).delete()
 
         return Response({}, status=status.HTTP_204_NO_CONTENT)
