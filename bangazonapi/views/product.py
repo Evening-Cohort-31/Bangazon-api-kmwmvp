@@ -3,6 +3,7 @@
 import base64
 from decimal import Decimal
 
+
 from django.core.files.base import ContentFile
 from rest_framework import (
     serializers,
@@ -12,7 +13,7 @@ from rest_framework import (
     response,
 )
 from rest_framework.decorators import action
-from bangazonapi.models import Customer, Product, ProductCategory, recommendation
+from bangazonapi.models import Customer, Product, ProductCategory, ProductRating
 
 
 class CategorySummarySerializer(serializers.ModelSerializer):
@@ -21,6 +22,13 @@ class CategorySummarySerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductCategory
         fields = ["id", "name"]
+
+class ProductRatingSerializer(serializers.ModelSerializer):
+    """JSON serializer for product ratings"""
+
+    class Meta:
+        model = ProductRating
+        fields = ["id", "product", "customer", "rating"] 
 
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -460,3 +468,81 @@ class ProductViewSet(viewsets.ViewSet):
             return response.Response(
                 {"message": "Product not found"}, status=status.HTTP_404_NOT_FOUND
             )
+    
+    @action(methods=["post", "put", "get"], detail=True)
+    def rate_product(self, request, pk=None):
+        
+        try:
+            customer = Customer.objects.get(user=request.auth.user)
+            product = Product.objects.get(pk=pk)
+
+            
+        
+            if request.method == "POST":
+
+                if ProductRating.objects.filter(customer=customer, product=product).exists():
+                    return response.Response({"message": "You have already rated this product."}, status=status.HTTP_400_BAD_REQUEST,)
+                
+                serializer = ProductRatingSerializer(data={
+                "customer": customer.id,
+                "product": product.id,
+                "rating": request.data["rating"]
+                }, context={"request": request})
+
+                if serializer.is_valid():
+                    serializer.save()
+                    return response.Response(serializer.data, status=status.HTTP_201_CREATED)
+            
+                else:
+                    return response.Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
+            if request.method == "GET":
+
+                try: 
+
+                    rating = ProductRating.objects.get(customer=customer, product=product)
+
+                    serializer = ProductRatingSerializer(rating)
+
+                    return response.Response(serializer.data, status=status.HTTP_200_OK)
+                
+                except ProductRating.DoesNotExist:
+                    return response.Response(
+                        {"message": "You have not rated this product yet"}, status=status.HTTP_404_NOT_FOUND
+                    )
+
+
+            if request.method == "PUT":
+
+                try:
+
+                    rating = ProductRating.objects.get(customer=customer, product=product)
+
+                    if "rating" in request.data:
+                        rating.rating = request.data["rating"]
+
+                        serializer=ProductRatingSerializer(rating, data={
+                            "customer": customer.id,
+                            "product": product.id,
+                            "rating": request.data["rating"]})
+
+                        if serializer.is_valid():
+                            serializer.save()
+                
+                            return response.Response(serializer.data, status=status.HTTP_202_ACCEPTED)
+                        else:
+                            return response.Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                    else:
+                        return response.Response({"message": "Please provide a Rating."}, status=status.HTTP_400_BAD_REQUEST)
+                
+                except ProductRating.DoesNotExist:
+                    return response.Response(
+                        {"message": "You have not rated this product yet"}, status=status.HTTP_404_NOT_FOUND
+                    )
+            
+        
+        except Product.DoesNotExist:
+            return response.Response(
+                {"message": "Product not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+ 
