@@ -10,6 +10,7 @@ from bangazonapi.views.report import (
     pending_orders_report,
     inexpensive_products_report,
     expensive_products_report,
+    favorite_sellers_report,
 )
 
 # pylint: disable=invalid-name
@@ -52,4 +53,5 @@ urlpatterns = [
         expensive_products_report,
         name="expensive_products",
     ),
+    path("reports/favoritesellers", favorite_sellers_report, name="favorite_sellers"),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
