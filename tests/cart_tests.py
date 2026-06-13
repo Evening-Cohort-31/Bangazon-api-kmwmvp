@@ -5,6 +5,7 @@
 import json
 from rest_framework import status
 from rest_framework.test import APITestCase
+from bangazonapi.models import Cart
 
 
 class CartTests(APITestCase):
@@ -155,3 +156,15 @@ class CartTests(APITestCase):
         self.assertEqual(len(json_response["lineitems"]), 0)
         self.assertEqual(json_response["total"], 0.00)
         self.assertEqual(json_response["customer"], 2)
+
+    def test_cart_operations_do_not_create_duplicate_carts(self):
+        """Ensure repeated cart access keeps one cart per customer."""
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token)
+
+        self.client.get("/cart")
+        self.client.get("/cart")
+        self.client.post("/cart", {"product_id": 1}, format="json")
+        response = self.client.delete("/cart/delete_all")
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(Cart.objects.count(), 1)

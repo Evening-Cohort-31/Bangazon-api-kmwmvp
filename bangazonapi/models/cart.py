@@ -5,7 +5,7 @@ from .customer import Customer
 
 
 class Cart(models.Model):
-    customer = models.ForeignKey(
+    customer = models.OneToOneField(
         Customer,
         on_delete=models.DO_NOTHING,
     )
@@ -13,4 +13,4 @@ class Cart(models.Model):
     # add a total property to the model giving the total of the order based on its lineitems
     @property
     def total(self):
-        return sum(item.product.price for item in self.lineitems.all()) # type: ignore[attr-defined]
+        return sum(item.product.price for item in self.lineitems.all())  # type: ignore[attr-defined]
